@@ -1,6 +1,6 @@
 # @nce/app
 
-Vite + React + **TanStack Router** SPA for the NCE player. Uses `@nce/catalog`, `@nce/player`, HeroUI v3, Tailwind v4, Zustand `persist`, and `vite-plugin-pwa` (static precache only). Deploys as static files (e.g. **GitHub Pages**).
+Vite + React + **TanStack Router** SPA for the NCE player. Uses `@nce/catalog`, `@nce/player`, **shadcn/ui** (Base UI primitives), Tailwind v4, Zustand `persist`, and `vite-plugin-pwa` (static precache only). Deploys as static files (e.g. **GitHub Pages**).
 
 ## Prerequisites
 

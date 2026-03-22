@@ -14,6 +14,8 @@ export type NceSessionState = {
   trackPlayMode: TrackPlayMode;
   playbackRate: number;
   translationMode: TranslationMode;
+  /** When set, pause playback once time reaches the next line (or track end). Not persisted. */
+  pauseAfterLineIndex: number | null;
   lyricLines: LyricLine[];
   lyricsStatus: "idle" | "loading" | "error" | "ready";
   lyricsError: string | null;
@@ -29,6 +31,8 @@ export type NceSessionState = {
   loadLyricsForCurrentUnit: () => Promise<void>;
   setLyricLines: (lines: LyricLine[]) => void;
   applyPlayerPreferences: (p: PlayerPreferences) => void;
+  armPauseAfterLine: (lineIndex: number) => void;
+  clearPauseAfterLine: () => void;
 };
 
 function unitCountForBook(bookKey: string | null): number {
@@ -44,9 +48,18 @@ export const useNceStore = create<NceSessionState>()(
       trackPlayMode: player.DEFAULT_PLAYER_PREFERENCES.trackPlayMode,
       playbackRate: player.DEFAULT_PLAYER_PREFERENCES.playbackRate,
       translationMode: player.DEFAULT_PLAYER_PREFERENCES.translationMode,
+      pauseAfterLineIndex: null,
       lyricLines: [],
       lyricsStatus: "idle" as const,
       lyricsError: null,
+
+      armPauseAfterLine: (lineIndex: number) => {
+        set({ pauseAfterLineIndex: lineIndex });
+      },
+
+      clearPauseAfterLine: () => {
+        set({ pauseAfterLineIndex: null });
+      },
 
       setBook: (bookKey: string, preferredUnitIndex?: number) => {
         const book = catalog.getBook(bookKey);
@@ -57,6 +70,7 @@ export const useNceStore = create<NceSessionState>()(
         set({
           bookKey,
           unitIndex,
+          pauseAfterLineIndex: null,
           lyricLines: [],
           lyricsStatus: "idle",
           lyricsError: null,
@@ -69,6 +83,7 @@ export const useNceStore = create<NceSessionState>()(
         if (n <= 0 || index < 0 || index >= n) return;
         set({
           unitIndex: index,
+          pauseAfterLineIndex: null,
           lyricLines: [],
           lyricsStatus: "idle",
           lyricsError: null,
@@ -81,6 +96,7 @@ export const useNceStore = create<NceSessionState>()(
         if (!bookKey || !player.canNext(unitIndex, n)) return;
         set({
           unitIndex: player.nextUnitIndex(unitIndex, n),
+          pauseAfterLineIndex: null,
           lyricLines: [],
           lyricsStatus: "idle",
           lyricsError: null,
@@ -92,6 +108,7 @@ export const useNceStore = create<NceSessionState>()(
         if (!bookKey || !player.canPrev(unitIndex)) return;
         set({
           unitIndex: player.prevUnitIndex(unitIndex),
+          pauseAfterLineIndex: null,
           lyricLines: [],
           lyricsStatus: "idle",
           lyricsError: null,
@@ -170,6 +187,7 @@ export const useNceStore = create<NceSessionState>()(
             lyricLines: lines,
             lyricsStatus: "ready",
             lyricsError: null,
+            pauseAfterLineIndex: null,
           });
         } catch (e) {
           const raw = e instanceof Error ? e.message : "Failed to load lyrics";
@@ -193,6 +211,7 @@ export const useNceStore = create<NceSessionState>()(
             lyricLines: [],
             lyricsStatus: "error",
             lyricsError: message,
+            pauseAfterLineIndex: null,
           });
         }
       },

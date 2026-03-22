@@ -44,6 +44,7 @@ describe("useNceStore onAudioEnded", () => {
       trackPlayMode: "sequential",
       playbackRate: 1,
       translationMode: "show",
+      pauseAfterLineIndex: null,
       lyricLines: [],
       lyricsStatus: "idle",
       lyricsError: null,

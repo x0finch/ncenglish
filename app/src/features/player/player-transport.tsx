@@ -1,5 +1,15 @@
-import { Button } from "@heroui/react";
 import type { TrackPlayMode } from "@nce/player";
+import {
+  Gauge,
+  Languages,
+  ListOrdered,
+  Pause,
+  Play,
+  Repeat1,
+  SkipBack,
+  SkipForward,
+} from "lucide-react";
+import { Button } from "#/components/ui/button.tsx";
 
 export type PlayerTransportControlsProps = {
   mediaTime: number;
@@ -37,8 +47,7 @@ export function PlayerTransportControls({
   onCycleTrackPlayMode,
   onCycleTranslationMode,
 }: PlayerTransportControlsProps) {
-  const modeLabel =
-    trackPlayMode === "repeatOne" ? "Repeat one" : "Sequential";
+  const isRepeatOne = trackPlayMode === "repeatOne";
 
   return (
     <div className="w-full">
@@ -58,24 +67,76 @@ export function PlayerTransportControls({
       </div>
       <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-between">
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button size="sm" variant="outline" onPress={onPrev}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onPrev}
+            aria-label="Previous lesson"
+          >
+            <SkipBack className="size-3.5" aria-hidden />
             Previous
           </Button>
-          <Button size="sm" variant="primary" onPress={onTogglePlay}>
+          <Button
+            type="button"
+            size="sm"
+            variant="default"
+            onClick={onTogglePlay}
+            aria-label={paused ? "Play" : "Pause"}
+          >
+            {paused ? (
+              <Play className="size-3.5" aria-hidden fill="currentColor" />
+            ) : (
+              <Pause className="size-3.5" aria-hidden />
+            )}
             {paused ? "Play" : "Pause"}
           </Button>
-          <Button size="sm" variant="outline" onPress={onNext}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onNext}
+            aria-label="Next lesson"
+          >
             Next
+            <SkipForward className="size-3.5" aria-hidden />
           </Button>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button size="sm" variant="outline" onPress={onCyclePlaybackRate}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onCyclePlaybackRate}
+            aria-label={`Playback speed ${playbackRate}x, click to change`}
+          >
+            <Gauge className="size-3.5" aria-hidden />
             {playbackRate}x
           </Button>
-          <Button size="sm" variant="outline" onPress={onCycleTrackPlayMode}>
-            {modeLabel}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onCycleTrackPlayMode}
+            aria-label={
+              isRepeatOne ? "Repeat one, click to change mode" : "Sequential play, click to change mode"
+            }
+          >
+            {isRepeatOne ? (
+              <Repeat1 className="size-3.5" aria-hidden />
+            ) : (
+              <ListOrdered className="size-3.5" aria-hidden />
+            )}
+            {isRepeatOne ? "Repeat one" : "Sequential"}
           </Button>
-          <Button size="sm" variant="outline" onPress={onCycleTranslationMode}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onCycleTranslationMode}
+            aria-label="Chinese or English subtitles, click to cycle"
+          >
+            <Languages className="size-3.5" aria-hidden />
             中/英
           </Button>
         </div>

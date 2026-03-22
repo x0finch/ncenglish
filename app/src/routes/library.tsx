@@ -1,7 +1,14 @@
-import { Button, Card, Chip, Tabs } from "@heroui/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Search, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import catalog from "@nce/catalog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "#/components/ui/tabs.tsx";
+import { BookCoverArt } from "../components/book-cover-art.tsx";
 import { useNceStore } from "../features/player/nce-store.ts";
 
 export const Route = createFileRoute("/library")({
@@ -36,66 +43,85 @@ function LibraryPage() {
   }, [books]);
 
   return (
-    <main className="nce-page-wrap px-4 pb-28 pt-4 md:pb-10">
-      <header className="mb-6">
-        <h1 className="mb-2 text-2xl font-semibold tracking-tight">Library</h1>
-        <p className="max-w-2xl text-sm leading-relaxed opacity-80">
-          Browse New Concept English books, pick a level, and open the player to
-          study with audio and line-by-line text.
-        </p>
-      </header>
+    <main className="nce-page-wrap min-w-0 px-4 pb-28 pt-4 md:pb-10 md:pt-6">
+      <Tabs defaultValue="all" className="w-full">
+        <div className="mb-8 flex max-w-6xl flex-col gap-4 sm:mb-10 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <TabsList
+            variant="line"
+            aria-label="Book edition"
+            className="h-auto w-full flex-wrap justify-start gap-x-1 gap-y-0 rounded-none border-0 border-b border-[var(--line)] bg-transparent p-0 sm:w-auto"
+          >
+            <TabsTrigger
+              value="all"
+              className="rounded-none border-b-2 border-transparent px-0 pb-2.5 text-sm data-active:border-[var(--lagoon-deep)] data-active:bg-transparent data-active:shadow-none sm:px-1 sm:pb-3"
+            >
+              All
+            </TabsTrigger>
+            <TabsTrigger
+              value="classic"
+              className="rounded-none border-b-2 border-transparent px-0 pb-2.5 text-sm data-active:border-[var(--lagoon-deep)] data-active:bg-transparent data-active:shadow-none sm:px-1 sm:pb-3"
+            >
+              Classic
+            </TabsTrigger>
+            <TabsTrigger
+              value="ed85"
+              className="rounded-none border-b-2 border-transparent px-0 pb-2.5 text-sm data-active:border-[var(--lagoon-deep)] data-active:bg-transparent data-active:shadow-none sm:px-1 sm:pb-3"
+            >
+              85 ed.
+            </TabsTrigger>
+          </TabsList>
 
-      <div className="mb-6 max-w-md">
-        <label
-          htmlFor="library-search"
-          className="mb-1 block text-sm font-medium opacity-80"
-        >
-          Search
-        </label>
-        <input
-          id="library-search"
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Book title or key"
-          className="focus:ring-lagoon-deep/40 w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-3 py-2 text-sm outline-none focus:ring-2"
-        />
-      </div>
+          <div className="flex w-full flex-col gap-1 sm:w-auto sm:min-w-[14rem] sm:max-w-xs">
+            <label htmlFor="library-search" className="sr-only">
+              Search books
+            </label>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--sea-ink-soft)] opacity-60"
+                aria-hidden
+              />
+              <input
+                id="library-search"
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search…"
+                className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] py-2.5 pl-10 pr-3 text-sm outline-none transition-[border-color,box-shadow] placeholder:text-[var(--sea-ink-soft)]/55 focus:border-[color-mix(in_oklab,var(--lagoon-deep)_40%,var(--line))] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--lagoon-deep)_18%,transparent)]"
+              />
+            </div>
+            {q.trim() ? (
+              <p className="text-xs text-[var(--sea-ink-soft)]">
+                {filtered.length} match{filtered.length === 1 ? "" : "es"}
+              </p>
+            ) : null}
+          </div>
+        </div>
 
-      <Tabs.Root defaultSelectedKey="all" className="w-full">
-        <Tabs.ListContainer className="mb-6">
-          <Tabs.List aria-label="Book edition">
-            <Tabs.Tab id="all">All</Tabs.Tab>
-            <Tabs.Tab id="classic">Classic</Tabs.Tab>
-            <Tabs.Tab id="ed85">85 edition</Tabs.Tab>
-          </Tabs.List>
-        </Tabs.ListContainer>
-
-        <Tabs.Panel id="all" className="outline-none">
+        <TabsContent value="all" className="mt-0 outline-none">
           <BookGrid
             books={filtered}
             coverByKey={coverByKey}
             setBook={setBook}
             emptyMessage="No books match your search."
           />
-        </Tabs.Panel>
-        <Tabs.Panel id="classic" className="outline-none">
+        </TabsContent>
+        <TabsContent value="classic" className="mt-0 outline-none">
           <BookGrid
             books={filtered.filter((b) => b.edition === "classic")}
             coverByKey={coverByKey}
             setBook={setBook}
             emptyMessage="No Classic books match your search."
           />
-        </Tabs.Panel>
-        <Tabs.Panel id="ed85" className="outline-none">
+        </TabsContent>
+        <TabsContent value="ed85" className="mt-0 outline-none">
           <BookGrid
             books={filtered.filter((b) => b.edition === "85")}
             coverByKey={coverByKey}
             setBook={setBook}
             emptyMessage="No 85 edition books match your search."
           />
-        </Tabs.Panel>
-      </Tabs.Root>
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }
@@ -113,23 +139,36 @@ function BookGrid({
 }) {
   if (books.length === 0) {
     return (
-      <p className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-8 text-center text-sm opacity-80">
-        {emptyMessage}
-      </p>
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--line)] px-6 py-20 text-center">
+        <Sparkles
+          className="mb-3 size-8 text-[var(--sea-ink-soft)] opacity-50"
+          aria-hidden
+        />
+        <p className="max-w-sm text-sm text-[var(--sea-ink)]">{emptyMessage}</p>
+        <p className="mt-1 max-w-sm text-xs text-[var(--sea-ink-soft)]">
+          Try another tab or clear search.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-      {books.map((b) => (
-        <BookCard
-          key={b.key}
-          book={b}
-          coverUrl={coverByKey.get(b.key)}
-          onOpen={() => setBook(b.key)}
-        />
-      ))}
-    </div>
+    <>
+      <div className="mx-auto grid w-full min-w-0 max-w-5xl grid-cols-2 items-start justify-items-stretch gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-10 md:grid-cols-4">
+        {books.map((b) => (
+          <div
+            key={b.key}
+            className="flex min-w-0 justify-center"
+          >
+            <BookCard
+              book={b}
+              coverUrl={coverByKey.get(b.key)}
+              onOpen={() => setBook(b.key)}
+            />
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -143,42 +182,41 @@ function BookCard({
   onOpen: () => void;
 }) {
   const navigate = useNavigate();
+  const is85 = book.edition === "85";
+
+  const open = () => {
+    onOpen();
+    void navigate({
+      to: "/play/$bookKey",
+      params: { bookKey: book.key },
+      search: { unit: undefined },
+    });
+  };
+
   return (
-    <Card className="border border-[var(--line)] bg-[var(--surface-strong)] p-3 shadow-sm transition-[border-color] hover:border-[color-mix(in_oklab,var(--lagoon-deep)_35%,var(--line))]">
-      <div className="mb-2 aspect-[3/4] w-full overflow-hidden rounded-lg bg-[var(--chip-bg)]">
-        {coverUrl ? (
-          <img
-            src={coverUrl}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
-            onError={(e) => {
-              e.currentTarget.remove();
-            }}
-          />
-        ) : null}
+    <button
+      type="button"
+      onClick={open}
+      className="group mx-auto flex min-w-0 w-full max-w-[10rem] flex-col items-center overflow-visible text-left outline-none transition duration-300 ease-out hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--lagoon-deep)_35%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--foam)] sm:max-w-[11rem]"
+    >
+      <BookCoverArt src={coverUrl} variant="grid" />
+
+      <div className="w-full pt-2.5 sm:pt-3">
+        <h3 className="line-clamp-2 text-pretty text-sm font-semibold leading-snug tracking-tight text-[var(--sea-ink)] sm:text-[0.9375rem]">
+          {book.title}
+        </h3>
+        <p className="mt-1 text-xs text-[var(--sea-ink-soft)]">
+          {book.bookLevel}
+          <span className="mx-1.5 text-[var(--line)]" aria-hidden>
+            ·
+          </span>
+          {is85 ? "85 edition" : "Classic"}
+          <span className="mx-1.5 text-[var(--line)]" aria-hidden>
+            ·
+          </span>
+          {book.unitCount} lessons
+        </p>
       </div>
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <Chip size="sm">{book.bookLevel}</Chip>
-        <span className="text-xs opacity-60">{book.unitCount} units</span>
-      </div>
-      <p className="mb-3 line-clamp-3 text-sm font-semibold leading-snug">
-        {book.title}
-      </p>
-      <Button
-        className="w-full"
-        onPress={() => {
-          onOpen();
-          void navigate({
-            to: "/play/$bookKey",
-            params: { bookKey: book.key },
-            search: { unit: undefined },
-          });
-        }}
-      >
-        Open
-      </Button>
-    </Card>
+    </button>
   );
 }
