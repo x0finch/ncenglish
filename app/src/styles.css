@@ -8,6 +8,8 @@
 }
 
 :root {
+  /* Sticky header block height on large screens (nav + padding); used for app-like layouts */
+  --app-header-height: 4.5rem;
   --sea-ink: #173a40;
   --sea-ink-soft: #416166;
   --lagoon: #4fb8b2;
@@ -81,8 +83,13 @@
 
 html,
 body,
-#app {
+#root {
   min-height: 100%;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
 }
 
 body {

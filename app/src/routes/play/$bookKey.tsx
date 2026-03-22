@@ -1,8 +1,12 @@
 import { Button, Card, Chip, Modal } from "@heroui/react";
 import catalog from "@nce/catalog";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import type React from "react";
+import type { LyricLine } from "@nce/catalog";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  PlayerTransportControls,
+  type PlayerTransportControlsProps,
+} from "../../features/player/player-transport.tsx";
 import { useNceStore } from "../../features/player/nce-store.ts";
 import { logMediaInfo, logMediaWarn } from "../../lib/client-media-log.ts";
 
@@ -17,6 +21,13 @@ export const Route = createFileRoute("/play/$bookKey")({
   component: PlayPage,
 });
 
+function formatTime(sec: number): string {
+  if (!Number.isFinite(sec)) return "0:00";
+  const s = Math.floor(sec % 60);
+  const m = Math.floor(sec / 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 function PlayPage() {
   const { bookKey } = Route.useParams();
   const { unit: unitFromUrl } = Route.useSearch();
@@ -24,6 +35,7 @@ function PlayPage() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [mediaTime, setMediaTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [paused, setPaused] = useState(true);
 
   const unitIndex = useNceStore((s) => s.unitIndex);
   const trackPlayMode = useNceStore((s) => s.trackPlayMode);
@@ -49,6 +61,16 @@ function PlayPage() {
   useEffect(() => {
     useNceStore.getState().setBook(bookKey, unitFromUrl);
   }, [bookKey, unitFromUrl]);
+
+  useEffect(() => {
+    const idx = useNceStore.getState().unitIndex;
+    void navigate({
+      to: "/play/$bookKey",
+      params: { bookKey },
+      search: { unit: idx },
+      replace: true,
+    });
+  }, [bookKey, unitIndex, navigate]);
 
   useEffect(() => {
     void loadLyricsForCurrentUnit();
@@ -115,6 +137,19 @@ function PlayPage() {
     return () => el.removeEventListener("error", onError);
   }, [bookKey, unitIndex]);
 
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const sync = () => setPaused(el.paused);
+    sync();
+    el.addEventListener("play", sync);
+    el.addEventListener("pause", sync);
+    return () => {
+      el.removeEventListener("play", sync);
+      el.removeEventListener("pause", sync);
+    };
+  }, [bookKey, unitIndex]);
+
   const activeLyric = catalog.activeLyricIndex(lyricLines, mediaTime);
 
   useEffect(() => {
@@ -124,12 +159,6 @@ function PlayPage() {
 
   const selectUnit = (idx: number) => {
     setUnitIndex(idx);
-    void navigate({
-      to: "/play/$bookKey",
-      params: { bookKey },
-      search: { unit: idx },
-      replace: true,
-    });
   };
 
   const onEnded = () => {
@@ -140,6 +169,18 @@ function PlayPage() {
       el.currentTime = 0;
       void el.play();
     }
+  };
+
+  const togglePlay = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (el.paused) void el.play();
+    else el.pause();
+  };
+
+  const onSeek = (t: number) => {
+    const el = audioRef.current;
+    if (el) el.currentTime = t;
   };
 
   const book = catalog.getBook(bookKey);
@@ -154,167 +195,133 @@ function PlayPage() {
     coverUrl = null;
   }
 
+  const transportProps = {
+    mediaTime,
+    duration,
+    onSeek,
+    paused,
+    onTogglePlay: togglePlay,
+    onPrev: goPrev,
+    onNext: goNext,
+    playbackRate,
+    onCyclePlaybackRate: cyclePlaybackRate,
+    trackPlayMode,
+    onCycleTrackPlayMode: cycleTrackPlayMode,
+    onCycleTranslationMode: cycleTranslationMode,
+  };
+
+  const bottomPad =
+    "pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:pb-[calc(10.5rem+env(safe-area-inset-bottom))]";
+
   return (
-    <main className="nce-page-wrap px-4 pb-28 pt-4 md:grid md:max-w-7xl md:grid-cols-[minmax(260px,320px)_1fr] md:gap-8 md:pb-10">
+    <main
+      className={`flex min-h-0 flex-1 flex-col px-4 pt-4 ${bottomPad} lg:h-[calc(100dvh-var(--app-header-height))] lg:max-h-[calc(100dvh-var(--app-header-height))] lg:flex-none lg:overflow-hidden`}
+    >
       <audio
         ref={audioRef}
         className="hidden"
         controls={false}
         onTimeUpdate={(e) => setMediaTime(e.currentTarget.currentTime)}
         onDurationChange={(e) => setDuration(e.currentTarget.duration || 0)}
+        onPlay={() => setPaused(false)}
+        onPause={() => setPaused(true)}
         onEnded={onEnded}
       />
 
-      <section className="mb-4 md:mb-0">
-        <div className="mb-3 flex items-center justify-between gap-2 md:block">
-          <h2 className="text-lg font-semibold">Units</h2>
-          <Chip size="sm" className="md:mt-2">
-            {units.length} lessons
-          </Chip>
-        </div>
-        <ul className="max-h-[32vh] space-y-1 overflow-y-auto md:max-h-[calc(100vh-8rem)]">
-          {units.map((u) => (
-            <li key={u.entry}>
-              <button
-                type="button"
-                onClick={() => selectUnit(u.index)}
-                className={
-                  u.index === unitIndex
-                    ? "w-full rounded-lg border border-[var(--lagoon-deep)] bg-[color-mix(in_oklab,var(--lagoon)_18%,transparent)] px-3 py-2.5 text-left text-sm font-medium"
-                    : "w-full rounded-lg border border-transparent px-3 py-2.5 text-left text-sm opacity-90 hover:bg-[var(--surface-strong)]"
-                }
-              >
-                {u.entry}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="min-w-0">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <Button size="sm" onPress={goPrev}>
-            Prev
-          </Button>
-          <Button size="sm" onPress={goNext}>
-            Next
-          </Button>
-          <Button size="sm" onPress={() => cyclePlaybackRate()}>
-            {playbackRate}x
-          </Button>
-          <Button size="sm" onPress={() => cycleTrackPlayMode()}>
-            {trackPlayMode === "repeatOne" ? "Repeat one" : "Sequential"}
-          </Button>
-          <Button size="sm" onPress={() => cycleTranslationMode()}>
-            CC: {translationMode}
-          </Button>
-        </div>
-
-        <Card className="mb-4 border border-[var(--line)] bg-[var(--surface-strong)] p-4 md:p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start">
-            {coverUrl ? (
-              <div className="mx-auto shrink-0 overflow-hidden rounded-xl bg-[var(--chip-bg)] md:mx-0">
-                <img
-                  src={coverUrl}
-                  alt=""
-                  width={160}
-                  height={213}
-                  className="aspect-[3/4] w-36 object-cover sm:w-40"
-                  decoding="async"
-                  onError={(e) => {
-                    e.currentTarget.parentElement?.remove();
-                  }}
-                />
-              </div>
-            ) : null}
-            <div className="min-w-0 flex-1 text-center md:text-left">
-              <p className="text-sm opacity-70">{book?.title ?? bookKey}</p>
-              <h1 className="mt-1 text-xl font-semibold md:text-2xl">
-                {currentTitle}
-              </h1>
-            </div>
-          </div>
-          <div className="mt-4 hidden md:block">
-            <input
-              type="range"
-              min={0}
-              max={duration || 0}
-              step={0.01}
-              value={Math.min(mediaTime, duration || 0)}
-              onChange={(e) => {
-                const el = audioRef.current;
-                if (!el) return;
-                el.currentTime = Number(e.target.value);
-              }}
-              className="w-full accent-[var(--lagoon-deep)]"
-            />
-            <div className="mt-1 flex justify-between text-xs opacity-70">
-              <span>{formatTime(mediaTime)}</span>
-              <span>{formatTime(duration)}</span>
-            </div>
-          </div>
-          <div className="mt-4 flex justify-center md:justify-start">
-            <Button
-              size="lg"
-              onPress={() => {
-                const el = audioRef.current;
-                if (!el) return;
-                if (el.paused) void el.play();
-                else el.pause();
-              }}
+      <div
+        className="nce-page-wrap flex min-h-0 flex-1 flex-col gap-4 lg:max-w-[1600px] lg:min-h-0 lg:flex-1 lg:grid lg:grid-cols-[minmax(200px,280px)_minmax(0,1fr)] lg:gap-6 lg:overflow-hidden"
+      >
+        <aside className="flex min-h-0 flex-col gap-4 lg:min-h-0 lg:overflow-hidden lg:border-r lg:border-[var(--line)] lg:pr-4">
+          <Card className="shrink-0 border border-[var(--line)] bg-[var(--surface-strong)] p-3 shadow-sm">
+            <Link
+              to="/library"
+              className="mb-3 inline-block text-sm font-medium text-[var(--lagoon-deep)] underline-offset-2 hover:underline"
             >
-              Play / Pause
-            </Button>
-          </div>
-        </Card>
-
-        <div className="min-h-[40vh] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 md:min-h-[42vh]">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--kicker)]">
-            Lyrics
-          </h2>
-          {lyricsStatus === "loading" && (
-            <p className="text-sm opacity-70">Loading lyrics…</p>
-          )}
-          {lyricsStatus === "error" && (
-            <p className="text-sm text-red-600/90">{lyricsError}</p>
-          )}
-          {lyricsStatus === "ready" && lyricLines.length === 0 && (
-            <p className="text-sm opacity-70">No lyric lines.</p>
-          )}
-          <ul className="space-y-2">
-            {lyricLines.map((line, i) => (
-              <li
-                key={`${line.timeSec}-${line.english.slice(0, 24)}`}
-                id={`lyric-line-${i}`}
-                className={
-                  i === activeLyric
-                    ? "font-semibold text-[var(--lagoon-deep)]"
-                    : "opacity-80"
-                }
-              >
-                <span className="text-xs opacity-50 tabular-nums">
-                  {formatTime(line.timeSec)}
-                </span>
-                <div>{line.english}</div>
-                {translationMode !== "hide" && line.chinese ? (
-                  <div
-                    className={
-                      translationMode === "blur"
-                        ? "mt-0.5 blur-sm transition hover:blur-none"
-                        : "mt-0.5 text-sm opacity-75"
-                    }
-                  >
-                    {line.chinese}
+              Back to library
+            </Link>
+            <div className="flex gap-3">
+              {coverUrl ? (
+                <div className="h-20 w-14 shrink-0 overflow-hidden rounded-lg bg-[var(--chip-bg)]">
+                  <img
+                    src={coverUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    decoding="async"
+                    onError={(e) => {
+                      e.currentTarget.parentElement?.remove();
+                    }}
+                  />
+                </div>
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-3 text-sm font-semibold leading-snug">
+                  {book?.title ?? bookKey}
+                </p>
+                {book ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Chip size="sm">{book.bookLevel}</Chip>
+                    <Chip size="sm" variant="soft">
+                      {units.length} lessons
+                    </Chip>
                   </div>
                 ) : null}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+              </div>
+            </div>
+            <div className="mt-3 border-t border-[var(--line)] pt-3">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-[var(--kicker)]">
+                Now playing
+              </p>
+              <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug">
+                {currentTitle}
+              </p>
+            </div>
+          </Card>
+          <div className="flex min-h-[22vh] flex-1 flex-col lg:min-h-0">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--kicker)]">
+              Lessons
+            </h2>
+            <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1">
+              {units.map((u) => (
+                <li key={u.entry}>
+                  <button
+                    type="button"
+                    onClick={() => selectUnit(u.index)}
+                    className={
+                      u.index === unitIndex
+                        ? "w-full rounded-lg border border-[var(--lagoon-deep)] bg-[color-mix(in_oklab,var(--lagoon)_18%,transparent)] px-3 py-2.5 text-left text-sm font-medium"
+                        : "w-full rounded-lg border border-transparent px-3 py-2.5 text-left text-sm opacity-90 hover:bg-[var(--surface-strong)]"
+                    }
+                  >
+                    {u.entry}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </aside>
 
-      {/* Narrow: fixed mini player */}
-      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-[var(--line)] bg-[var(--header-bg)] px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 lg:min-h-0 lg:p-0">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:p-5">
+            <LyricsColumn
+              lyricsStatus={lyricsStatus}
+              lyricsError={lyricsError}
+              lyricLines={lyricLines}
+              activeLyric={activeLyric}
+              translationMode={translationMode}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop: full-width transport */}
+      <div className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-[var(--line)] bg-[var(--header-bg)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:block">
+        <div className="nce-page-wrap mx-auto max-w-[1600px] px-4 py-3">
+          <PlayerTransportControls {...transportProps} />
+        </div>
+      </div>
+
+      {/* Mobile: mini bar */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-[var(--line)] bg-[var(--header-bg)]/95 px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden">
         <button
           type="button"
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
@@ -338,57 +345,99 @@ function PlayPage() {
             <p className="truncate text-xs opacity-60">{book?.title}</p>
           </div>
         </button>
-        <Button
-          size="sm"
-          onPress={() => {
-            const el = audioRef.current;
-            if (!el) return;
-            if (el.paused) void el.play();
-            else el.pause();
-          }}
-        >
-          ▶
+        <Button size="sm" onPress={togglePlay}>
+          {paused ? "Play" : "Pause"}
         </Button>
       </div>
 
       <MobileExpandedPlayer
         open={expanded}
         onOpenChange={setExpanded}
-        audioRef={audioRef}
-        mediaTime={mediaTime}
-        duration={duration}
+        transportProps={transportProps}
         currentTitle={currentTitle}
         bookTitle={book?.title ?? ""}
         coverUrl={coverUrl}
-        onSeek={(t) => {
-          const el = audioRef.current;
-          if (el) el.currentTime = t;
-        }}
       />
     </main>
+  );
+}
+
+function LyricsColumn({
+  lyricsStatus,
+  lyricsError,
+  lyricLines,
+  activeLyric,
+  translationMode,
+}: {
+  lyricsStatus: "idle" | "loading" | "error" | "ready";
+  lyricsError: string | null;
+  lyricLines: readonly LyricLine[];
+  activeLyric: number;
+  translationMode: "show" | "hide" | "blur";
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <h2 className="mb-3 shrink-0 text-sm font-semibold uppercase tracking-wide text-[var(--kicker)]">
+        Line by line
+      </h2>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+        {lyricsStatus === "loading" && (
+          <p className="text-sm opacity-70">Loading lyrics…</p>
+        )}
+        {lyricsStatus === "error" && (
+          <p className="text-sm text-red-600/90">{lyricsError}</p>
+        )}
+        {lyricsStatus === "ready" && lyricLines.length === 0 && (
+          <p className="text-sm opacity-70">No lyric lines.</p>
+        )}
+        <ul className="space-y-2">
+          {lyricLines.map((line, i) => (
+            <li
+              key={`${line.timeSec}-${line.english.slice(0, 24)}`}
+              id={`lyric-line-${i}`}
+              className={
+                i === activeLyric
+                  ? "font-semibold text-[var(--lagoon-deep)]"
+                  : "opacity-80"
+              }
+            >
+              <span className="text-xs opacity-50 tabular-nums">
+                {formatTime(line.timeSec)}
+              </span>
+              <div>{line.english}</div>
+              {translationMode !== "hide" && line.chinese ? (
+                <div
+                  className={
+                    translationMode === "blur"
+                      ? "mt-0.5 blur-sm transition hover:blur-none"
+                      : "mt-0.5 text-sm opacity-75"
+                  }
+                >
+                  {line.chinese}
+                </div>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
 
 function MobileExpandedPlayer({
   open,
   onOpenChange,
-  audioRef,
-  mediaTime,
-  duration,
+  transportProps,
   currentTitle,
   bookTitle,
   coverUrl,
-  onSeek,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  audioRef: React.RefObject<HTMLAudioElement | null>;
-  mediaTime: number;
-  duration: number;
+  transportProps: PlayerTransportControlsProps;
   currentTitle: string;
   bookTitle: string;
   coverUrl: string | null;
-  onSeek: (t: number) => void;
 }) {
   return (
     <Modal>
@@ -405,48 +454,19 @@ function MobileExpandedPlayer({
                   <img
                     src={coverUrl}
                     alt=""
-                    className="max-h-48 w-auto max-w-full rounded-xl object-contain shadow-sm"
+                    className="max-h-40 w-auto max-w-full rounded-xl object-contain shadow-sm"
                     decoding="async"
                   />
                 </div>
               ) : null}
-              <input
-                type="range"
-                min={0}
-                max={duration || 0}
-                step={0.01}
-                value={Math.min(mediaTime, duration || 0)}
-                onChange={(e) => onSeek(Number(e.target.value))}
-                className="w-full accent-[var(--lagoon-deep)]"
-              />
-              <div className="mt-2 flex justify-between text-xs opacity-70">
-                <span>{formatTime(mediaTime)}</span>
-                <span>{formatTime(duration)}</span>
-              </div>
+              <PlayerTransportControls {...transportProps} />
             </Modal.Body>
             <Modal.Footer>
               <Button slot="close">Close</Button>
-              <Button
-                onPress={() => {
-                  const el = audioRef.current;
-                  if (!el) return;
-                  if (el.paused) void el.play();
-                  else el.pause();
-                }}
-              >
-                Play / Pause
-              </Button>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
     </Modal>
   );
-}
-
-function formatTime(sec: number): string {
-  if (!Number.isFinite(sec)) return "0:00";
-  const s = Math.floor(sec % 60);
-  const m = Math.floor(sec / 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
 }
