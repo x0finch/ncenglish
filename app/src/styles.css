@@ -174,7 +174,8 @@ pre code {
 }
 
 .nce-page-wrap {
-  width: min(1280px, calc(100% - 2rem));
+  width: 100%;
+  max-width: 1280px;
   margin-inline: auto;
 }
 
@@ -382,7 +383,11 @@ a {
 .player-transport-seek {
   --player-seek-track-h: 2px;
   --player-seek-thumb: 11px;
-  --player-seek-rest: color-mix(in oklab, var(--border) 88%, var(--muted-foreground) 12%);
+  --player-seek-rest: color-mix(
+    in oklab,
+    var(--border) 88%,
+    var(--muted-foreground) 12%
+  );
   -webkit-appearance: none;
   appearance: none;
   width: 100%;

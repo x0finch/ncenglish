@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Library } from "lucide-react";
+import { cn } from "#/lib/utils.ts";
 
 export default function Header() {
   const isLibraryPage = useRouterState({
@@ -8,10 +9,18 @@ export default function Header() {
       s.location.pathname.startsWith("/library/"),
   });
 
+  const isPlayPage = useRouterState({
+    select: (s) => s.location.pathname.startsWith("/play/"),
+  });
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 px-2 backdrop-blur-lg md:px-4">
       <nav
-        className="nce-page-wrap flex items-center py-3 sm:py-4"
+        className={cn(
+          "nce-page-wrap flex items-center py-3 sm:py-4",
+          /* Match play page lyrics card inner edge: main px-2 + card p-3 */
+          isPlayPage && "max-md:pl-3",
+        )}
         aria-label="Primary"
       >
         {isLibraryPage ? (

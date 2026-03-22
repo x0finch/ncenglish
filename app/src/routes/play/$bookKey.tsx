@@ -389,31 +389,33 @@ function PlayPage() {
     coverUrl,
   };
 
+  /* Reserve only slightly more than the fixed transport bar (pb is inside main, so smaller = more room for lyrics). */
   const bottomPad =
-    "pb-[calc(8.75rem+env(safe-area-inset-bottom))] md:pb-[calc(10.5rem+env(safe-area-inset-bottom))]";
+    "pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-[calc(8.75rem+env(safe-area-inset-bottom))]";
 
   return (
-    <main
-      className={`flex min-h-0 flex-1 flex-col px-2 pt-2 ${bottomPad} md:px-4 md:pt-4 md:h-[calc(100dvh-var(--app-header-height))] md:max-h-[calc(100dvh-var(--app-header-height))] md:flex-none md:overflow-hidden`}
-    >
-      <audio
-        ref={audioRef}
-        className="hidden"
-        controls={false}
-        onTimeUpdate={onAudioTimeUpdate}
-        onDurationChange={(e) => setDuration(e.currentTarget.duration || 0)}
-        onPlay={() => setPaused(false)}
-        onPause={() => setPaused(true)}
-        onEnded={onEnded}
-      />
-
-      <div
-        className="nce-page-wrap flex min-h-0 flex-1 flex-col gap-2 md:max-w-[1600px] md:min-h-0 md:flex-1 md:grid md:grid-cols-[minmax(200px,280px)_minmax(0,1fr)] md:gap-6 md:overflow-hidden"
+    <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+      <main
+        className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-2 pt-2 ${bottomPad} md:px-4 md:pt-4`}
       >
-        <aside className="flex shrink-0 flex-col md:min-h-0 md:shrink md:overflow-hidden md:border-r md:border-border md:pr-4">
+        <audio
+          ref={audioRef}
+          className="hidden"
+          controls={false}
+          onTimeUpdate={onAudioTimeUpdate}
+          onDurationChange={(e) => setDuration(e.currentTarget.duration || 0)}
+          onPlay={() => setPaused(false)}
+          onPause={() => setPaused(true)}
+          onEnded={onEnded}
+        />
+
+        <div
+          className="nce-page-wrap grid min-h-0 w-full min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden md:max-w-[1600px] md:grid-cols-[minmax(200px,280px)_minmax(0,1fr)] md:grid-rows-1 md:gap-6"
+        >
+        <aside className="flex shrink-0 flex-col md:h-full md:min-h-0 md:shrink md:overflow-hidden md:border-r md:border-border md:pr-4">
           {/* Narrow screens: bottom drawer for lesson list */}
           <div className="md:hidden">
-            <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="mb-1 pl-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Lessons
             </h2>
             {units.length === 0 ? (
@@ -500,8 +502,8 @@ function PlayPage() {
           </div>
         </aside>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card p-2 md:min-h-0 md:rounded-2xl md:p-0">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:p-5">
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card p-0 md:h-full md:min-h-0 md:rounded-2xl">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:h-full md:p-6">
             <LyricsColumn
               lyricsStatus={lyricsStatus}
               lyricsError={lyricsError}
@@ -512,20 +514,25 @@ function PlayPage() {
             />
           </div>
         </div>
-      </div>
+        </div>
+      </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:block">
-        <div className="nce-page-wrap mx-auto max-w-[1600px] px-4 py-3">
-          <PlayerTransportControls {...transportProps} />
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 hidden md:block">
+        <div className="pointer-events-auto border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+          <div className="nce-page-wrap max-w-[1600px] px-4 py-3">
+            <PlayerTransportControls {...transportProps} />
+          </div>
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
-        <div className="max-h-[min(45dvh,14rem)] overflow-y-auto overscroll-contain px-2 py-1.5">
-          <PlayerTransportControls {...transportProps} dock />
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 md:hidden">
+        <div className="pointer-events-auto border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+          <div className="max-h-[min(45dvh,14rem)] overflow-y-auto overscroll-contain px-2 py-1.5">
+            <PlayerTransportControls {...transportProps} dock />
+          </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -642,7 +649,7 @@ function LyricsColumn({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-1 flex shrink-0 items-start justify-between gap-2 md:mb-2">
+      <div className="mb-1 flex shrink-0 items-start justify-between gap-2 px-3 pt-3 md:mb-2 md:px-0 md:pt-0">
         <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground md:gap-2">
           <ListMusic className="size-4 shrink-0 opacity-80" aria-hidden />
           Lyrics
@@ -651,7 +658,7 @@ function LyricsColumn({
           <LyricsInteractionTips />
         ) : null}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0 md:pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-0.5 md:px-0 md:pb-4 md:pt-0 md:pr-2">
         {lyricsStatus === "loading" && (
           <p className="text-sm opacity-70">Loading lyrics…</p>
         )}
@@ -661,7 +668,7 @@ function LyricsColumn({
         {lyricsStatus === "ready" && lyricLines.length === 0 && (
           <p className="text-sm opacity-70">No lyric lines.</p>
         )}
-        <ul className="list-none space-y-1.5 p-0 md:space-y-2">
+        <ul className="list-none space-y-1 p-0 md:space-y-1.5">
           {lyricLines.map((line, i) => (
             <li
               key={`${line.timeSec}-${line.english.slice(0, 24)}`}
@@ -671,10 +678,10 @@ function LyricsColumn({
                 type="button"
                 onClick={() => onLyricLineClick(i, line.timeSec)}
                 className={cn(
-                  "w-full cursor-pointer rounded-lg border border-transparent bg-transparent px-0.5 py-1 text-left font-[inherit] transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation md:px-1 md:py-1.5",
+                  "w-full cursor-pointer rounded-lg border px-2 py-2 text-left font-[inherit] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation md:px-3 md:py-2.5",
                   i === activeLyric
-                    ? "font-semibold text-primary"
-                    : "opacity-80",
+                    ? "border-transparent bg-primary/15 font-semibold text-primary shadow-sm"
+                    : "border-transparent bg-transparent opacity-80 hover:bg-accent",
                 )}
                 aria-label={`Seek to ${formatTime(line.timeSec)}: ${line.english.slice(0, 120)}. Double-click the same line to pause when it ends.`}
                 title="Double-click this line (twice quickly) to pause when this line ends."
