@@ -1,4 +1,5 @@
 # Build @nce/app and deploy dist/ to GitHub Pages (project site: /<repo>/).
+# Prerequisite: Repo Settings → Pages → Source = "GitHub Actions" (or deploy-pages returns 404).
 name: Deploy app to GitHub Pages
 
 on:

@@ -50,7 +50,15 @@ Then publish `app/dist` as the Pages artifact for `https://<user>.github.io/nceE
 
 ### GitHub Actions
 
-See [`.github/workflows/deploy-app.yml`](../../.github/workflows/deploy-app.yml) at monorepo root: builds the app with `VITE_BASE_PATH=/<repository-name>/` and uploads `dist` to Pages.
+Workflow: [`.github/workflows/deploy-app.yml`](../../.github/workflows/deploy-app.yml) — builds with `VITE_BASE_PATH=/<repository-name>/` and uploads `app/dist` to Pages.
+
+**Required once per repo (otherwise `deploy-pages` fails with HTTP 404):**
+
+1. Open **Settings → Pages**.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions** (not “Deploy from a branch”). Save.
+3. Re-run the failed workflow (**Actions** → workflow run → **Re-run all jobs**).
+
+If GitHub shows a prompt to configure the **`github-pages`** environment, approve it. Private repos need a plan that includes Pages; the site must stay **public** for free project Pages unless your org allows otherwise.
 
 ## PWA
 
