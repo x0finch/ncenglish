@@ -37,6 +37,8 @@ export type PlayerTransportControlsProps = {
   coverUrl?: string | null;
   /** When false, hide artwork + titles (e.g. mobile sheet already shows them). Default true. */
   showTrackInfo?: boolean;
+  /** Tighter layout: play + rate/repeat/translation on one row (fixed mobile dock). */
+  dock?: boolean;
 };
 
 function formatTime(sec: number): string {
@@ -70,7 +72,7 @@ function TransportPlayCluster({
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]"
+        className="text-muted-foreground hover:text-foreground"
         onClick={onPrev}
         aria-label="Previous lesson"
       >
@@ -97,7 +99,7 @@ function TransportPlayCluster({
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]"
+        className="text-muted-foreground hover:text-foreground"
         onClick={onNext}
         aria-label="Next lesson"
       >
@@ -120,7 +122,7 @@ function translationModeUi(mode: TranslationMode): {
         ariaLabel:
           "Chinese subtitles visible; click to hide Chinese or cycle display mode",
         icon: <Globe className="size-4" aria-hidden />,
-        buttonClass: "text-[var(--lagoon-deep)]",
+        buttonClass: "text-primary",
       };
     case "hide":
       return {
@@ -128,7 +130,7 @@ function translationModeUi(mode: TranslationMode): {
         ariaLabel:
           "Chinese subtitles hidden; click to blur Chinese or cycle display mode",
         icon: <GlobeOff className="size-4" aria-hidden />,
-        buttonClass: "text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]",
+        buttonClass: "text-muted-foreground hover:text-foreground",
       };
     case "blur":
       return {
@@ -136,7 +138,7 @@ function translationModeUi(mode: TranslationMode): {
         ariaLabel:
           "English and Chinese lyrics blurred until hover; click to show clearly or cycle display mode",
         icon: <EyeClosed className="size-4" aria-hidden />,
-        buttonClass: "text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]",
+        buttonClass: "text-muted-foreground hover:text-foreground",
       };
   }
 }
@@ -165,7 +167,7 @@ function TransportExtraCluster({
         type="button"
         variant="ghost"
         size="sm"
-        className="h-8 gap-1 px-2 text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]"
+        className="h-8 gap-1 px-2 text-muted-foreground hover:text-foreground"
         onClick={onCyclePlaybackRate}
         title={`Speed ${playbackRate}x`}
         aria-label={`Playback speed ${playbackRate}x, click to change`}
@@ -180,8 +182,8 @@ function TransportExtraCluster({
         variant="ghost"
         size="icon-sm"
         className={cn(
-          "text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]",
-          isRepeatOne && "text-[var(--lagoon-deep)]",
+          "text-muted-foreground hover:text-foreground",
+          isRepeatOne && "text-primary",
         )}
         onClick={onCycleTrackPlayMode}
         title={isRepeatOne ? "Repeat one" : "Sequential"}
@@ -230,6 +232,7 @@ export function PlayerTransportControls({
   bookTitle,
   coverUrl,
   showTrackInfo = true,
+  dock = false,
 }: PlayerTransportControlsProps) {
   const isRepeatOne = trackPlayMode === "repeatOne";
   const dur = duration || 0;
@@ -239,8 +242,13 @@ export function PlayerTransportControls({
   return (
     <div className="w-full">
       {/* Progress */}
-      <div className="mb-3 flex items-center gap-3 sm:gap-4">
-        <span className="w-10 shrink-0 text-right text-xs font-medium tabular-nums text-[var(--sea-ink)] sm:w-11 sm:text-[0.8125rem]">
+      <div
+        className={cn(
+          "flex items-center sm:gap-4",
+          dock ? "mb-2 gap-2" : "mb-3 gap-3",
+        )}
+      >
+        <span className="w-10 shrink-0 text-right text-xs font-medium tabular-nums text-foreground sm:w-11 sm:text-[0.8125rem]">
           {formatTime(t)}
         </span>
         <input
@@ -254,43 +262,65 @@ export function PlayerTransportControls({
           className="player-transport-seek min-w-0 flex-1"
           style={{ "--seek-pct": `${seekPct}%` } as CSSProperties}
         />
-        <span className="w-10 shrink-0 text-right text-xs tabular-nums text-[var(--sea-ink-soft)] sm:w-11 sm:text-[0.8125rem]">
+        <span className="w-10 shrink-0 text-right text-xs tabular-nums text-muted-foreground sm:w-11 sm:text-[0.8125rem]">
           {formatTime(dur)}
         </span>
       </div>
 
       {showTrackInfo ? (
-        <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-x-4">
-          <div className="flex min-w-0 w-full max-w-full items-center gap-3 justify-self-start sm:max-w-[min(100%,22rem)]">
-            <BookCoverArt src={coverUrl} variant="transportBar" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold tracking-tight text-[var(--sea-ink)]">
-                {nowPlayingTitle}
-              </p>
-              <p className="truncate text-xs text-[var(--sea-ink-soft)]">
-                {bookTitle?.trim() ? bookTitle : "—"}
-              </p>
-            </div>
+        dock ? (
+          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-2">
+            <div className="min-w-0" aria-hidden />
+            <TransportPlayCluster
+              paused={paused}
+              onTogglePlay={onTogglePlay}
+              onPrev={onPrev}
+              onNext={onNext}
+              className="justify-self-center"
+            />
+            <TransportExtraCluster
+              playbackRate={playbackRate}
+              onCyclePlaybackRate={onCyclePlaybackRate}
+              isRepeatOne={isRepeatOne}
+              onCycleTrackPlayMode={onCycleTrackPlayMode}
+              onCycleTranslationMode={onCycleTranslationMode}
+              translationMode={translationMode}
+              className="min-w-0 justify-self-end"
+            />
           </div>
+        ) : (
+          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-x-4">
+            <div className="flex min-w-0 w-full max-w-full items-center gap-3 justify-self-start sm:max-w-[min(100%,22rem)]">
+              <BookCoverArt src={coverUrl} variant="transportBar" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold tracking-tight text-foreground">
+                  {nowPlayingTitle}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {bookTitle?.trim() ? bookTitle : "—"}
+                </p>
+              </div>
+            </div>
 
-          <TransportPlayCluster
-            paused={paused}
-            onTogglePlay={onTogglePlay}
-            onPrev={onPrev}
-            onNext={onNext}
-            className="sm:justify-self-center"
-          />
+            <TransportPlayCluster
+              paused={paused}
+              onTogglePlay={onTogglePlay}
+              onPrev={onPrev}
+              onNext={onNext}
+              className="sm:justify-self-center"
+            />
 
-          <TransportExtraCluster
-            playbackRate={playbackRate}
-            onCyclePlaybackRate={onCyclePlaybackRate}
-            isRepeatOne={isRepeatOne}
-            onCycleTrackPlayMode={onCycleTrackPlayMode}
-            onCycleTranslationMode={onCycleTranslationMode}
-            translationMode={translationMode}
-            className="justify-center sm:justify-self-end"
-          />
-        </div>
+            <TransportExtraCluster
+              playbackRate={playbackRate}
+              onCyclePlaybackRate={onCyclePlaybackRate}
+              isRepeatOne={isRepeatOne}
+              onCycleTrackPlayMode={onCycleTrackPlayMode}
+              onCycleTranslationMode={onCycleTranslationMode}
+              translationMode={translationMode}
+              className="justify-center sm:justify-self-end"
+            />
+          </div>
+        )
       ) : (
         <div className="flex flex-col gap-3">
           <TransportPlayCluster

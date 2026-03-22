@@ -53,7 +53,7 @@ export function BookCoverArt({ src, variant, className }: BookCoverArtProps) {
         className={cn(
           // self-start: avoid flex row stretch pulling this to full text column height (causes vertical gaps).
           // max-* on img only: hug image aspect — no letterboxing inside a fixed h-20 frame.
-          "inline-flex shrink-0 self-start overflow-hidden rounded-lg bg-[var(--chip-bg)]",
+          "inline-flex shrink-0 self-start overflow-hidden rounded-lg bg-muted",
           className,
         )}
       >
@@ -72,7 +72,7 @@ export function BookCoverArt({ src, variant, className }: BookCoverArtProps) {
     return (
       <div
         className={cn(
-          "flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--chip-bg)]",
+          "flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted",
           className,
         )}
       >
@@ -93,7 +93,7 @@ export function BookCoverArt({ src, variant, className }: BookCoverArtProps) {
     return (
       <div
         className={cn(
-          "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--chip-bg)] shadow-[inset_0_1px_0_var(--inset-glint)] ring-1 ring-[var(--line)]/70",
+          "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted shadow-inner ring-1 ring-border/70",
           className,
         )}
       >
@@ -107,7 +107,7 @@ export function BookCoverArt({ src, variant, className }: BookCoverArtProps) {
           />
         ) : (
           <ListMusic
-            className="size-7 text-[var(--lagoon-deep)]/30"
+            className="size-7 text-primary/30"
             aria-hidden
           />
         )}
@@ -134,12 +134,12 @@ function BookCoverGridPlaceholder({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex min-h-[9rem] w-full max-w-[8.25rem] shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--chip-bg)] to-[color-mix(in_oklab,var(--lagoon)_14%,var(--chip-bg))] sm:min-h-[9.5rem] sm:max-w-[9.25rem]",
+        "flex min-h-[9rem] w-full max-w-[8.25rem] shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-muted to-primary/10 sm:min-h-[9.5rem] sm:max-w-[9.25rem]",
         className,
       )}
       aria-hidden
     >
-      <BookOpen className="size-10 text-[var(--lagoon-deep)]/30 sm:size-11" />
+      <BookOpen className="size-10 text-primary/30 sm:size-11" />
     </div>
   );
 }

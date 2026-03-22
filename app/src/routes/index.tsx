@@ -24,7 +24,7 @@ function HomeRedirect() {
   }, [bookKey, navigate]);
 
   return (
-    <div className="nce-page-wrap flex min-h-[40vh] items-center justify-center px-4 text-sm opacity-70">
+    <div className="nce-page-wrap flex min-h-[40vh] items-center justify-center px-2 text-sm text-muted-foreground md:px-4">
       Redirecting…
     </div>
   );

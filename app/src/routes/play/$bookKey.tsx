@@ -1,13 +1,7 @@
 import catalog from "@nce/catalog";
 import type { LyricLine } from "@nce/catalog";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  AlertCircle,
-  ChevronUp,
-  ListMusic,
-  Pause,
-  Play,
-} from "lucide-react";
+import { AlertCircle, ChevronDown, ListMusic } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -18,21 +12,15 @@ import {
   type SyntheticEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "#/components/ui/button.tsx";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "#/components/ui/dialog.tsx";
-import { BookCoverArt } from "../../components/book-cover-art.tsx";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "#/components/ui/drawer.tsx";
 import { cn } from "#/lib/utils.ts";
-import {
-  PlayerTransportControls,
-  type PlayerTransportControlsProps,
-} from "../../features/player/player-transport.tsx";
+import { PlayerTransportControls } from "../../features/player/player-transport.tsx";
 import { useNceStore } from "../../features/player/nce-store.ts";
 import { logMediaInfo, logMediaWarn } from "../../lib/client-media-log.ts";
 
@@ -87,7 +75,8 @@ function PlayPage() {
   const armPauseAfterLine = useNceStore((s) => s.armPauseAfterLine);
   const clearPauseAfterLine = useNceStore((s) => s.clearPauseAfterLine);
 
-  const [expanded, setExpanded] = useState(false);
+  const [lessonsDrawerOpen, setLessonsDrawerOpen] = useState(false);
+  const drawerSelectedLessonRef = useRef<HTMLButtonElement | null>(null);
   const lyricDoubleClickRef = useRef<{ lineIndex: number; t: number } | null>(
     null,
   );
@@ -218,6 +207,23 @@ function PlayPage() {
       el.removeEventListener("pause", sync);
     };
   }, [bookKey, unitIndex]);
+
+  useEffect(() => {
+    if (!lessonsDrawerOpen) return;
+    const scrollToSelected = () => {
+      drawerSelectedLessonRef.current?.scrollIntoView({
+        block: "center",
+        inline: "nearest",
+        behavior: "auto",
+      });
+    };
+    const t0 = window.setTimeout(scrollToSelected, 0);
+    const t1 = window.setTimeout(scrollToSelected, 120);
+    return () => {
+      window.clearTimeout(t0);
+      window.clearTimeout(t1);
+    };
+  }, [lessonsDrawerOpen, unitIndex]);
 
   const activeLyric = catalog.activeLyricIndex(lyricLines, mediaTime);
 
@@ -384,11 +390,11 @@ function PlayPage() {
   };
 
   const bottomPad =
-    "pb-[calc(7.5rem+env(safe-area-inset-bottom))] md:pb-[calc(10.5rem+env(safe-area-inset-bottom))]";
+    "pb-[calc(8.75rem+env(safe-area-inset-bottom))] md:pb-[calc(10.5rem+env(safe-area-inset-bottom))]";
 
   return (
     <main
-      className={`flex min-h-0 flex-1 flex-col px-4 pt-4 ${bottomPad} md:h-[calc(100dvh-var(--app-header-height))] md:max-h-[calc(100dvh-var(--app-header-height))] md:flex-none md:overflow-hidden`}
+      className={`flex min-h-0 flex-1 flex-col px-2 pt-2 ${bottomPad} md:px-4 md:pt-4 md:h-[calc(100dvh-var(--app-header-height))] md:max-h-[calc(100dvh-var(--app-header-height))] md:flex-none md:overflow-hidden`}
     >
       <audio
         ref={audioRef}
@@ -402,14 +408,79 @@ function PlayPage() {
       />
 
       <div
-        className="nce-page-wrap flex min-h-0 flex-1 flex-col gap-4 md:max-w-[1600px] md:min-h-0 md:flex-1 md:grid md:grid-cols-[minmax(200px,280px)_minmax(0,1fr)] md:gap-6 md:overflow-hidden"
+        className="nce-page-wrap flex min-h-0 flex-1 flex-col gap-2 md:max-w-[1600px] md:min-h-0 md:flex-1 md:grid md:grid-cols-[minmax(200px,280px)_minmax(0,1fr)] md:gap-6 md:overflow-hidden"
       >
-        <aside className="flex min-h-0 flex-col md:min-h-0 md:overflow-hidden md:border-r md:border-[var(--line)] md:pr-4">
-          <div className="flex min-h-[22vh] flex-1 flex-col md:min-h-0">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--kicker)]">
+        <aside className="flex shrink-0 flex-col md:min-h-0 md:shrink md:overflow-hidden md:border-r md:border-border md:pr-4">
+          {/* Narrow screens: bottom drawer for lesson list */}
+          <div className="md:hidden">
+            <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Lessons
             </h2>
-            <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1">
+            {units.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground">
+                No lessons.
+              </p>
+            ) : (
+              <Drawer open={lessonsDrawerOpen} onOpenChange={setLessonsDrawerOpen}>
+                <DrawerTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-2.5 text-left text-sm text-foreground shadow-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                    aria-expanded={lessonsDrawerOpen}
+                    aria-haspopup="dialog"
+                  >
+                    <span className="min-w-0 truncate">
+                      {units[unitIndex]?.entry ?? currentTitle}
+                    </span>
+                    <ChevronDown
+                      className="size-4 shrink-0 text-muted-foreground opacity-70"
+                      aria-hidden
+                    />
+                  </button>
+                </DrawerTrigger>
+                <DrawerContent>
+                  <DrawerHeader className="gap-0 px-4 py-2 text-left">
+                    <DrawerTitle className="text-sm font-semibold leading-tight">
+                      Lessons
+                    </DrawerTitle>
+                  </DrawerHeader>
+                  <div className="max-h-[min(60vh,28rem)] overflow-y-auto overscroll-contain px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                    <ul className="space-y-1">
+                      {units.map((u) => (
+                        <li key={u.entry}>
+                          <button
+                            ref={
+                              u.index === unitIndex
+                                ? drawerSelectedLessonRef
+                                : undefined
+                            }
+                            type="button"
+                            onClick={() => {
+                              selectUnit(u.index);
+                              setLessonsDrawerOpen(false);
+                            }}
+                            className={
+                              u.index === unitIndex
+                                ? "w-full rounded-lg border border-primary bg-primary/15 px-3 py-2.5 text-left text-sm font-medium"
+                                : "w-full rounded-lg border border-transparent px-3 py-2.5 text-left text-sm opacity-90 hover:bg-muted"
+                            }
+                          >
+                            {u.entry}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </DrawerContent>
+              </Drawer>
+            )}
+          </div>
+
+          <div className="hidden min-h-0 flex-1 flex-col md:flex md:overflow-hidden">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Lessons
+            </h2>
+            <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-border bg-card p-1">
               {units.map((u) => (
                 <li key={u.entry}>
                   <button
@@ -417,8 +488,8 @@ function PlayPage() {
                     onClick={() => selectUnit(u.index)}
                     className={
                       u.index === unitIndex
-                        ? "w-full rounded-lg border border-[var(--lagoon-deep)] bg-[color-mix(in_oklab,var(--lagoon)_18%,transparent)] px-3 py-2.5 text-left text-sm font-medium"
-                        : "w-full rounded-lg border border-transparent px-3 py-2.5 text-left text-sm opacity-90 hover:bg-[var(--surface-strong)]"
+                        ? "w-full rounded-lg border border-primary bg-primary/15 px-3 py-2.5 text-left text-sm font-medium"
+                        : "w-full rounded-lg border border-transparent px-3 py-2.5 text-left text-sm opacity-90 hover:bg-muted"
                     }
                   >
                     {u.entry}
@@ -429,7 +500,7 @@ function PlayPage() {
           </div>
         </aside>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 md:min-h-0 md:p-0">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card p-2 md:min-h-0 md:rounded-2xl md:p-0">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:p-5">
             <LyricsColumn
               lyricsStatus={lyricsStatus}
@@ -443,48 +514,17 @@ function PlayPage() {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-[var(--line)] bg-[var(--header-bg)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:block">
+      <div className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:block">
         <div className="nce-page-wrap mx-auto max-w-[1600px] px-4 py-3">
           <PlayerTransportControls {...transportProps} />
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-[var(--line)] bg-[var(--header-bg)]/95 px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-md md:hidden">
-        <button
-          type="button"
-          className="flex min-w-0 flex-1 items-center gap-3 text-left"
-          onClick={() => setExpanded(true)}
-          aria-label="Open full player controls"
-        >
-          <BookCoverArt src={coverUrl} variant="transportMini" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{currentTitle}</p>
-            <p className="truncate text-xs opacity-60">{book?.title}</p>
-          </div>
-          <ChevronUp className="size-5 shrink-0 opacity-50" aria-hidden />
-        </button>
-        <Button
-          type="button"
-          size="icon-sm"
-          onClick={togglePlay}
-          aria-label={paused ? "Play" : "Pause"}
-        >
-          {paused ? (
-            <Play className="size-4" fill="currentColor" aria-hidden />
-          ) : (
-            <Pause className="size-4" aria-hidden />
-          )}
-        </Button>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+        <div className="max-h-[min(45dvh,14rem)] overflow-y-auto overscroll-contain px-2 py-1.5">
+          <PlayerTransportControls {...transportProps} dock />
+        </div>
       </div>
-
-      <MobileExpandedPlayer
-        open={expanded}
-        onOpenChange={setExpanded}
-        transportProps={transportProps}
-        currentTitle={currentTitle}
-        bookTitle={book?.title ?? ""}
-        coverUrl={coverUrl}
-      />
     </main>
   );
 }
@@ -535,16 +575,16 @@ function LyricsInteractionTips() {
       id={tipsId}
       role="tooltip"
       style={tipStyle}
-      className="pointer-events-none rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] p-3 text-left text-xs leading-snug text-[var(--sea-ink-soft)] shadow-lg"
+      className="pointer-events-none rounded-lg border border-border bg-popover p-3 text-left text-xs leading-snug text-popover-foreground shadow-lg"
     >
-      <p className="mb-2 font-semibold text-[var(--sea-ink)]">Tips</p>
+      <p className="mb-2 font-semibold text-foreground">Tips</p>
       <ul className="list-disc space-y-1.5 pl-4">
         <li>
-          <span className="font-semibold text-[var(--sea-ink)]">Click</span> a
+          <span className="font-semibold text-foreground">Click</span> a
           line to jump there and play. If audio is paused, playback starts.
         </li>
         <li>
-          <span className="font-semibold text-[var(--sea-ink)]">
+          <span className="font-semibold text-foreground">
             Double-click
           </span>{" "}
           the same line quickly to pause automatically when that line ends.
@@ -558,7 +598,7 @@ function LyricsInteractionTips() {
       <button
         ref={btnRef}
         type="button"
-        className="rounded-md p-1 text-[var(--sea-ink-soft)] transition-colors hover:bg-[color-mix(in_oklab,var(--lagoon)_10%,transparent)] hover:text-[var(--lagoon-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--lagoon-deep)_35%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--foam)]"
+        className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         aria-label="Lyrics interaction tips"
         aria-describedby={tipsId}
         onMouseEnter={() => {
@@ -573,7 +613,7 @@ function LyricsInteractionTips() {
         onBlur={() => setOpen(false)}
       >
         <AlertCircle
-          className="size-[1.125rem] shrink-0"
+          className="size-4.5 shrink-0"
           strokeWidth={2}
           aria-hidden
         />
@@ -602,26 +642,26 @@ function LyricsColumn({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
-        <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--kicker)]">
+      <div className="mb-1 flex shrink-0 items-start justify-between gap-2 md:mb-2">
+        <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground md:gap-2">
           <ListMusic className="size-4 shrink-0 opacity-80" aria-hidden />
-          Line by line
+          Lyrics
         </h2>
         {lyricsStatus === "ready" && lyricLines.length > 0 ? (
           <LyricsInteractionTips />
         ) : null}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0 md:pr-1">
         {lyricsStatus === "loading" && (
           <p className="text-sm opacity-70">Loading lyrics…</p>
         )}
         {lyricsStatus === "error" && (
-          <p className="text-sm text-red-600/90">{lyricsError}</p>
+          <p className="text-sm text-destructive">{lyricsError}</p>
         )}
         {lyricsStatus === "ready" && lyricLines.length === 0 && (
           <p className="text-sm opacity-70">No lyric lines.</p>
         )}
-        <ul className="list-none space-y-2 p-0">
+        <ul className="list-none space-y-1.5 p-0 md:space-y-2">
           {lyricLines.map((line, i) => (
             <li
               key={`${line.timeSec}-${line.english.slice(0, 24)}`}
@@ -631,9 +671,9 @@ function LyricsColumn({
                 type="button"
                 onClick={() => onLyricLineClick(i, line.timeSec)}
                 className={cn(
-                  "w-full cursor-pointer rounded-lg border border-transparent bg-transparent px-1 py-1.5 text-left font-[inherit] transition hover:bg-[color-mix(in_oklab,var(--lagoon)_10%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--lagoon-deep)_35%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--foam)] touch-manipulation",
+                  "w-full cursor-pointer rounded-lg border border-transparent bg-transparent px-0.5 py-1 text-left font-[inherit] transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation md:px-1 md:py-1.5",
                   i === activeLyric
-                    ? "font-semibold text-[var(--lagoon-deep)]"
+                    ? "font-semibold text-primary"
                     : "opacity-80",
                 )}
                 aria-label={`Seek to ${formatTime(line.timeSec)}: ${line.english.slice(0, 120)}. Double-click the same line to pause when it ends.`}
@@ -670,35 +710,3 @@ function LyricsColumn({
   );
 }
 
-function MobileExpandedPlayer({
-  open,
-  onOpenChange,
-  transportProps,
-  currentTitle,
-  bookTitle,
-  coverUrl,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  transportProps: PlayerTransportControlsProps;
-  currentTitle: string;
-  bookTitle: string;
-  coverUrl: string | null;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton
-        className="top-auto bottom-0 left-1/2 max-h-[min(92dvh,100%)] w-full max-w-full translate-x-[-50%] translate-y-0 gap-4 overflow-y-auto rounded-t-xl rounded-b-none border-x-0 sm:max-w-full"
-      >
-        <DialogHeader>
-          <DialogTitle>{currentTitle}</DialogTitle>
-          <DialogDescription>{bookTitle}</DialogDescription>
-        </DialogHeader>
-        <BookCoverArt src={coverUrl} variant="dialog" />
-        <PlayerTransportControls {...transportProps} showTrackInfo={false} />
-        <DialogFooter showCloseButton />
-      </DialogContent>
-    </Dialog>
-  );
-}
