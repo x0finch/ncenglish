@@ -6,8 +6,9 @@
 # To use the default GitHub URL https://USER.github.io/REPO/ instead, set repository variable
 # VITE_BASE_PATH to "/REPO/" (match repo name, trailing slash). Settings → Secrets and variables → Actions → Variables.
 #
-# Media URLs: add repository secret VITE_NCE_MEDIA_BASE_URL (public R2/CDN origin, no trailing slash).
-# Settings → Secrets and variables → Actions → Secrets. Required for playback after deploy.
+# Media URLs (public R2/CDN origin, no trailing slash), required for playback:
+# - Repository secret: Settings → Secrets and variables → Actions → Secrets, OR
+# - Environment secret on "github-pages": the build job must use that environment (see below).
 name: Deploy app to GitHub Pages
 
 on:
@@ -27,6 +28,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Needed so VITE_NCE_MEDIA_BASE_URL from the github-pages *environment* secrets is in `secrets.*`.
+    environment: github-pages
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
