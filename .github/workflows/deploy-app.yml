@@ -5,6 +5,9 @@
 # Default base is "/" so https://your-domain/ works without extra repo configuration.
 # To use the default GitHub URL https://USER.github.io/REPO/ instead, set repository variable
 # VITE_BASE_PATH to "/REPO/" (match repo name, trailing slash). Settings → Secrets and variables → Actions → Variables.
+#
+# Media URLs: add repository secret VITE_NCE_MEDIA_BASE_URL (public R2/CDN origin, no trailing slash).
+# Settings → Secrets and variables → Actions → Secrets. Required for playback after deploy.
 name: Deploy app to GitHub Pages
 
 on:
@@ -35,13 +38,20 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - name: Require VITE_NCE_MEDIA_BASE_URL secret
+        env:
+          VITE_NCE_MEDIA_BASE_URL: ${{ secrets.VITE_NCE_MEDIA_BASE_URL }}
+        run: |
+          if [ -z "$VITE_NCE_MEDIA_BASE_URL" ]; then
+            echo "::error::Set Actions secret VITE_NCE_MEDIA_BASE_URL to your public media origin (no trailing slash). See workflow header comment."
+            exit 1
+          fi
       - name: Build SPA
         env:
           # Default "/": correct for custom domains (site served at domain root).
           # Override with e.g. "/ncenglish/" when testing via USER.github.io/REPO/ only.
           VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH || '/' }}
-          # Optional: set as repository secret if the site should load media from a fixed CDN
-          # VITE_NCE_MEDIA_BASE_URL: ${{ secrets.VITE_NCE_MEDIA_BASE_URL }}
+          VITE_NCE_MEDIA_BASE_URL: ${{ secrets.VITE_NCE_MEDIA_BASE_URL }}
         run: pnpm --filter @nce/app build
       - uses: actions/upload-pages-artifact@v3
         with:
