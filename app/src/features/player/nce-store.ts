@@ -14,6 +14,11 @@ export type NceSessionState = {
   trackPlayMode: TrackPlayMode;
   playbackRate: number;
   translationMode: TranslationMode;
+  /**
+   * When true, new audio sources (next lesson, refresh) do not auto-play until the user
+   * presses play or seeks from lyrics. Set on explicit pause; cleared on explicit play.
+   */
+  suppressAutoplay: boolean;
   /** When set, pause playback once time reaches the next line (or track end). Not persisted. */
   pauseAfterLineIndex: number | null;
   lyricLines: LyricLine[];
@@ -33,6 +38,7 @@ export type NceSessionState = {
   applyPlayerPreferences: (p: PlayerPreferences) => void;
   armPauseAfterLine: (lineIndex: number) => void;
   clearPauseAfterLine: () => void;
+  setSuppressAutoplay: (suppress: boolean) => void;
 };
 
 function unitCountForBook(bookKey: string | null): number {
@@ -48,6 +54,7 @@ export const useNceStore = create<NceSessionState>()(
       trackPlayMode: player.DEFAULT_PLAYER_PREFERENCES.trackPlayMode,
       playbackRate: player.DEFAULT_PLAYER_PREFERENCES.playbackRate,
       translationMode: player.DEFAULT_PLAYER_PREFERENCES.translationMode,
+      suppressAutoplay: false,
       pauseAfterLineIndex: null,
       lyricLines: [],
       lyricsStatus: "idle" as const,
@@ -59,6 +66,10 @@ export const useNceStore = create<NceSessionState>()(
 
       clearPauseAfterLine: () => {
         set({ pauseAfterLineIndex: null });
+      },
+
+      setSuppressAutoplay: (suppress: boolean) => {
+        set({ suppressAutoplay: suppress });
       },
 
       setBook: (bookKey: string, preferredUnitIndex?: number) => {
@@ -237,6 +248,7 @@ export const useNceStore = create<NceSessionState>()(
         trackPlayMode: s.trackPlayMode,
         playbackRate: s.playbackRate,
         translationMode: s.translationMode,
+        suppressAutoplay: s.suppressAutoplay,
       }),
     },
   ),

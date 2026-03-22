@@ -169,12 +169,15 @@ function PlayPage() {
       });
       if (el.src !== audioUrl) {
         el.src = audioUrl;
-        void el.play().catch((err) => {
-          logMediaWarn("audio.play_rejected", {
-            audioUrl,
-            message: err instanceof Error ? err.message : String(err),
+        const { suppressAutoplay } = useNceStore.getState();
+        if (suppressAutoplay !== true) {
+          void el.play().catch((err) => {
+            logMediaWarn("audio.play_rejected", {
+              audioUrl,
+              message: err instanceof Error ? err.message : String(err),
+            });
           });
-        });
+        }
       }
       el.playbackRate = playbackRate;
     } catch (e) {
@@ -246,8 +249,14 @@ function PlayPage() {
   const togglePlay = () => {
     const el = audioRef.current;
     if (!el) return;
-    if (el.paused) void el.play();
-    else el.pause();
+    const st = useNceStore.getState();
+    if (el.paused) {
+      st.setSuppressAutoplay(false);
+      void el.play();
+    } else {
+      st.setSuppressAutoplay(true);
+      el.pause();
+    }
   };
 
   const seekAudio = useCallback((t: number) => {
@@ -279,7 +288,10 @@ function PlayPage() {
         seekAudio(timeSec);
         armPauseAfterLine(lineIndex);
         const a = audioRef.current;
-        if (a?.paused) void a.play();
+        if (a?.paused) {
+          useNceStore.getState().setSuppressAutoplay(false);
+          void a.play();
+        }
         return;
       }
 
@@ -290,7 +302,10 @@ function PlayPage() {
       }
       seekAudio(timeSec);
       const a = audioRef.current;
-      if (a?.paused) void a.play();
+      if (a?.paused) {
+        useNceStore.getState().setSuppressAutoplay(false);
+        void a.play();
+      }
     },
     [armPauseAfterLine, bumpLyricClickScrollGate, clearPauseAfterLine, seekAudio],
   );
