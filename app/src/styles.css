@@ -68,76 +68,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   background-color: var(--background);
-  background:
-    radial-gradient(
-      1100px 620px at -8% -10%,
-      color-mix(in oklab, var(--primary) 14%, transparent),
-      transparent 58%
-    ),
-    radial-gradient(
-      1050px 620px at 112% -12%,
-      color-mix(in oklab, var(--muted-foreground) 10%, transparent),
-      transparent 62%
-    ),
-    radial-gradient(
-      720px 380px at 50% 115%,
-      color-mix(in oklab, var(--primary) 8%, transparent),
-      transparent 68%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--background) 88%, var(--muted) 12%) 0%,
-      var(--background) 100%
-    );
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  opacity: 0.28;
-  background:
-    radial-gradient(
-      circle at 20% 15%,
-      color-mix(in oklab, var(--background) 70%, white),
-      transparent 34%
-    ),
-    radial-gradient(
-      circle at 78% 26%,
-      color-mix(in oklab, var(--primary) 18%, transparent),
-      transparent 42%
-    ),
-    radial-gradient(
-      circle at 42% 82%,
-      color-mix(in oklab, var(--muted-foreground) 12%, transparent),
-      transparent 36%
-    );
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  opacity: 0.14;
-  background-image:
-    linear-gradient(
-      color-mix(in oklab, var(--foreground) 7%, transparent) 1px,
-      transparent 1px
-    ),
-    linear-gradient(
-      90deg,
-      color-mix(in oklab, var(--foreground) 6%, transparent) 1px,
-      transparent 1px
-    );
-  background-size: 28px 28px;
-  mask-image: radial-gradient(circle at 50% 30%, black, transparent 78%);
 }
 
 a {
@@ -337,9 +270,10 @@ a {
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0 0 0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  /* Same as header / body for a flat app shell */
+  --card: var(--background);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
@@ -376,6 +310,8 @@ a {
   }
   html {
     @apply font-sans;
+    /* iOS overscroll / translucent status bar show this behind the page */
+    background-color: var(--background);
   }
 }
 

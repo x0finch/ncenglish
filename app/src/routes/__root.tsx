@@ -13,9 +13,9 @@ function RootLayout() {
   initClientCatalog();
   syncTanstackDevtoolsTriggerToTopRight();
   return (
-    <div className="flex h-dvh min-h-0 flex-col">
+    <div className="flex h-dvh min-h-0 flex-col bg-background">
       <Header />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background">
         <Outlet />
       </div>
       <TanStackDevtools

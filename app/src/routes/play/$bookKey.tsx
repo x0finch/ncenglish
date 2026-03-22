@@ -19,6 +19,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "#/components/ui/drawer.tsx";
+import { formatMediaTime } from "#/lib/format-media-time.ts";
 import { cn } from "#/lib/utils.ts";
 import { PlayerTransportControls } from "../../features/player/player-transport.tsx";
 import { useNceStore } from "../../features/player/nce-store.ts";
@@ -34,13 +35,6 @@ export const Route = createFileRoute("/play/$bookKey")({
   },
   component: PlayPage,
 });
-
-function formatTime(sec: number): string {
-  if (!Number.isFinite(sec)) return "0:00";
-  const s = Math.floor(sec % 60);
-  const m = Math.floor(sec / 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
 
 /** Second click on the same lyric line within this window arms pause-at-end-of-line. */
 const LYRIC_DOUBLE_CLICK_MS = 450;
@@ -264,7 +258,9 @@ function PlayPage() {
 
   const seekAudio = useCallback((t: number) => {
     const el = audioRef.current;
-    if (el) el.currentTime = t;
+    if (!el) return;
+    const clamped = Number.isFinite(t) ? Math.max(0, t) : 0;
+    el.currentTime = clamped;
   }, []);
 
   const onSeekFromScrubber = useCallback(
@@ -389,9 +385,9 @@ function PlayPage() {
     coverUrl,
   };
 
-  /* Reserve only slightly more than the fixed transport bar (pb is inside main, so smaller = more room for lyrics). */
+  /* Reserve space for fixed transport; mobile adds extra above Safari toolbar (beyond safe-area). */
   const bottomPad =
-    "pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-[calc(8.75rem+env(safe-area-inset-bottom))]";
+    "pb-[calc(7.75rem+env(safe-area-inset-bottom))] md:pb-[calc(8.75rem+env(safe-area-inset-bottom))]";
 
   return (
     <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
@@ -446,7 +442,7 @@ function PlayPage() {
                       Lessons
                     </DrawerTitle>
                   </DrawerHeader>
-                  <div className="max-h-[min(60vh,28rem)] overflow-y-auto overscroll-contain px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                  <div className="max-h-[min(60dvh,28rem)] overflow-y-auto overscroll-contain px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
                     <ul className="space-y-1">
                       {units.map((u) => (
                         <li key={u.entry}>
@@ -518,7 +514,7 @@ function PlayPage() {
       </main>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 hidden md:block">
-        <div className="pointer-events-auto border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+        <div className="pointer-events-auto border-t border-border bg-background pb-[env(safe-area-inset-bottom)]">
           <div className="nce-page-wrap max-w-[1600px] px-4 py-3">
             <PlayerTransportControls {...transportProps} />
           </div>
@@ -526,7 +522,7 @@ function PlayPage() {
       </div>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 md:hidden">
-        <div className="pointer-events-auto border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+        <div className="pointer-events-auto border-t border-border bg-background pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="max-h-[min(45dvh,14rem)] overflow-y-auto overscroll-contain px-2 py-1.5">
             <PlayerTransportControls {...transportProps} dock />
           </div>
@@ -658,7 +654,7 @@ function LyricsColumn({
           <LyricsInteractionTips />
         ) : null}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-0.5 md:px-0 md:pb-4 md:pt-0 md:pr-2">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-10 pt-0.5 md:px-0 md:pb-4 md:pt-0 md:pr-2">
         {lyricsStatus === "loading" && (
           <p className="text-sm opacity-70">Loading lyrics…</p>
         )}
@@ -683,11 +679,11 @@ function LyricsColumn({
                     ? "border-transparent bg-primary/15 font-semibold text-primary shadow-sm"
                     : "border-transparent bg-transparent opacity-80 hover:bg-accent",
                 )}
-                aria-label={`Seek to ${formatTime(line.timeSec)}: ${line.english.slice(0, 120)}. Double-click the same line to pause when it ends.`}
+                aria-label={`Seek to ${formatMediaTime(line.timeSec)}: ${line.english.slice(0, 120)}. Double-click the same line to pause when it ends.`}
                 title="Double-click this line (twice quickly) to pause when this line ends."
               >
                 <span className="text-xs opacity-50 tabular-nums">
-                  {formatTime(line.timeSec)}
+                  {formatMediaTime(line.timeSec)}
                 </span>
                 {translationMode === "blur" ? (
                   <div className="blur-sm transition hover:blur-none">

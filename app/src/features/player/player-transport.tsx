@@ -14,6 +14,7 @@ import {
 import type { CSSProperties, ReactNode } from "react";
 import { BookCoverArt } from "#/components/book-cover-art.tsx";
 import { Button } from "#/components/ui/button.tsx";
+import { formatMediaTime } from "#/lib/format-media-time.ts";
 import { cn } from "#/lib/utils.ts";
 
 export type PlayerTransportControlsProps = {
@@ -40,13 +41,6 @@ export type PlayerTransportControlsProps = {
   /** Tighter layout: play + rate/repeat/translation on one row (fixed mobile dock). */
   dock?: boolean;
 };
-
-function formatTime(sec: number): string {
-  if (!Number.isFinite(sec)) return "0:00";
-  const s = Math.floor(sec % 60);
-  const m = Math.floor(sec / 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
 
 function TransportPlayCluster({
   paused,
@@ -249,7 +243,7 @@ export function PlayerTransportControls({
         )}
       >
         <span className="w-10 shrink-0 text-right text-xs font-medium tabular-nums text-foreground sm:w-11 sm:text-[0.8125rem]">
-          {formatTime(t)}
+          {formatMediaTime(t)}
         </span>
         <input
           type="range"
@@ -263,7 +257,7 @@ export function PlayerTransportControls({
           style={{ "--seek-pct": `${seekPct}%` } as CSSProperties}
         />
         <span className="w-10 shrink-0 text-right text-xs tabular-nums text-muted-foreground sm:w-11 sm:text-[0.8125rem]">
-          {formatTime(dur)}
+          {formatMediaTime(dur)}
         </span>
       </div>
 

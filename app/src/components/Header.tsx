@@ -14,7 +14,7 @@ export default function Header() {
   });
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 px-2 backdrop-blur-lg md:px-4">
+    <header className="sticky top-0 z-50 border-b border-border bg-background px-2 pt-[env(safe-area-inset-top)] md:px-4">
       <nav
         className={cn(
           "nce-page-wrap flex items-center py-3 sm:py-4",
