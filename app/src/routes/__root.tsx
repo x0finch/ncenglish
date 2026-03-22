@@ -3,6 +3,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import Header from "../components/Header.tsx";
 import { initClientCatalog } from "../lib/catalog-client.ts";
+import { syncTanstackDevtoolsTriggerToTopRight } from "../lib/tanstack-devtools-layout.ts";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -10,6 +11,7 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   initClientCatalog();
+  syncTanstackDevtoolsTriggerToTopRight();
   return (
     <div className="flex min-h-dvh flex-col">
       <Header />
@@ -17,7 +19,7 @@ function RootLayout() {
         <Outlet />
       </div>
       <TanStackDevtools
-        config={{ position: "bottom-right" }}
+        config={{ position: "top-right" }}
         plugins={[
           {
             name: "Tanstack Router",

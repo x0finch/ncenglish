@@ -1,8 +1,13 @@
-import { BookOpen } from "lucide-react";
+import { BookOpen, ListMusic } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "#/lib/utils.ts";
 
-export type BookCoverArtVariant = "grid" | "sidebar" | "transportMini" | "dialog";
+export type BookCoverArtVariant =
+  | "grid"
+  | "sidebar"
+  | "transportMini"
+  | "transportBar"
+  | "dialog";
 
 export type BookCoverArtProps = {
   /** Cover image URL; null/undefined shows no image (grid uses a placeholder). */
@@ -80,6 +85,32 @@ export function BookCoverArt({ src, variant, className }: BookCoverArtProps) {
             onError={() => setBroken(true)}
           />
         ) : null}
+      </div>
+    );
+  }
+
+  if (variant === "transportBar") {
+    return (
+      <div
+        className={cn(
+          "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--chip-bg)] shadow-[inset_0_1px_0_var(--inset-glint)] ring-1 ring-[var(--line)]/70",
+          className,
+        )}
+      >
+        {effectiveSrc ? (
+          <img
+            src={effectiveSrc}
+            alt=""
+            className="h-auto max-h-full w-auto max-w-full object-contain"
+            decoding="async"
+            onError={() => setBroken(true)}
+          />
+        ) : (
+          <ListMusic
+            className="size-7 text-[var(--lagoon-deep)]/30"
+            aria-hidden
+          />
+        )}
       </div>
     );
   }

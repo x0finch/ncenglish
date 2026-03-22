@@ -1,9 +1,8 @@
 import catalog from "@nce/catalog";
 import type { LyricLine } from "@nce/catalog";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
-  ArrowLeft,
   ChevronUp,
   ListMusic,
   Pause,
@@ -19,9 +18,7 @@ import {
   type SyntheticEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
-import { Card, CardContent } from "#/components/ui/card.tsx";
 import {
   Dialog,
   DialogContent,
@@ -380,6 +377,10 @@ function PlayPage() {
     trackPlayMode,
     onCycleTrackPlayMode: cycleTrackPlayMode,
     onCycleTranslationMode: cycleTranslationMode,
+    translationMode,
+    nowPlayingTitle: currentTitle,
+    bookTitle: book?.title ?? "",
+    coverUrl,
   };
 
   const bottomPad =
@@ -403,42 +404,7 @@ function PlayPage() {
       <div
         className="nce-page-wrap flex min-h-0 flex-1 flex-col gap-4 md:max-w-[1600px] md:min-h-0 md:flex-1 md:grid md:grid-cols-[minmax(200px,280px)_minmax(0,1fr)] md:gap-6 md:overflow-hidden"
       >
-        <aside className="flex min-h-0 flex-col gap-4 md:min-h-0 md:overflow-hidden md:border-r md:border-[var(--line)] md:pr-4">
-          <Card className="shrink-0 gap-0 border border-[var(--line)] bg-[var(--surface-strong)] py-0 shadow-sm ring-[var(--line)]">
-            <CardContent className="space-y-3 px-3 pt-3 pb-4">
-              <Link
-                to="/library"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--lagoon-deep)] underline-offset-2 hover:underline"
-              >
-                <ArrowLeft className="size-4 shrink-0 opacity-80" aria-hidden />
-                Back to library
-              </Link>
-              <div className="flex items-start gap-3">
-                <BookCoverArt src={coverUrl} variant="sidebar" />
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-3 text-sm font-semibold leading-snug">
-                    {book?.title ?? bookKey}
-                  </p>
-                  {book ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Badge variant="default">{book.bookLevel}</Badge>
-                      <Badge variant="secondary">
-                        {units.length} lessons
-                      </Badge>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="border-t border-[var(--line)] pt-3">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-[var(--kicker)]">
-                  Now playing
-                </p>
-                <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug">
-                  {currentTitle}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+        <aside className="flex min-h-0 flex-col md:min-h-0 md:overflow-hidden md:border-r md:border-[var(--line)] md:pr-4">
           <div className="flex min-h-[22vh] flex-1 flex-col md:min-h-0">
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--kicker)]">
               Lessons
@@ -676,18 +642,25 @@ function LyricsColumn({
                 <span className="text-xs opacity-50 tabular-nums">
                   {formatTime(line.timeSec)}
                 </span>
-                <div>{line.english}</div>
-                {translationMode !== "hide" && line.chinese ? (
-                  <div
-                    className={
-                      translationMode === "blur"
-                        ? "mt-0.5 blur-sm transition hover:blur-none"
-                        : "mt-0.5 text-sm opacity-75"
-                    }
-                  >
-                    {line.chinese}
+                {translationMode === "blur" ? (
+                  <div className="blur-sm transition hover:blur-none">
+                    <div>{line.english}</div>
+                    {line.chinese ? (
+                      <div className="mt-0.5 text-sm opacity-75">
+                        {line.chinese}
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
+                ) : (
+                  <>
+                    <div>{line.english}</div>
+                    {translationMode !== "hide" && line.chinese ? (
+                      <div className="mt-0.5 text-sm opacity-75">
+                        {line.chinese}
+                      </div>
+                    ) : null}
+                  </>
+                )}
               </button>
             </li>
           ))}
@@ -723,7 +696,7 @@ function MobileExpandedPlayer({
           <DialogDescription>{bookTitle}</DialogDescription>
         </DialogHeader>
         <BookCoverArt src={coverUrl} variant="dialog" />
-        <PlayerTransportControls {...transportProps} />
+        <PlayerTransportControls {...transportProps} showTrackInfo={false} />
         <DialogFooter showCloseButton />
       </DialogContent>
     </Dialog>

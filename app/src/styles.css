@@ -392,3 +392,128 @@ a {
     @apply font-sans;
   }
 }
+
+/* Player seek: filled track + thumb (WebKit uses --seek-pct gradient; Firefox uses ::-moz-range-progress). */
+.player-transport-seek {
+  --player-seek-track-h: 6px;
+  --player-seek-thumb: 15px;
+  --player-seek-rest: color-mix(in oklab, var(--line) 88%, var(--sea-ink) 12%);
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2.25rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+  background: transparent;
+}
+
+.player-transport-seek:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.player-transport-seek:focus {
+  outline: none;
+}
+
+.player-transport-seek:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--lagoon-deep) 28%, transparent),
+    0 2px 8px rgba(23, 58, 64, 0.22);
+}
+
+.player-transport-seek:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--lagoon-deep) 28%, transparent),
+    0 2px 8px rgba(23, 58, 64, 0.22);
+}
+
+.player-transport-seek::-webkit-slider-runnable-track {
+  height: var(--player-seek-track-h);
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--lagoon-deep) 0%,
+    var(--lagoon) var(--seek-pct, 0%),
+    var(--player-seek-rest) var(--seek-pct, 0%),
+    var(--player-seek-rest) 100%
+  );
+  box-shadow: 0 1px 2px rgba(23, 58, 64, 0.12) inset;
+}
+
+.player-transport-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--player-seek-thumb);
+  height: var(--player-seek-thumb);
+  margin-top: calc((var(--player-seek-track-h) - var(--player-seek-thumb)) / 2);
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklab, var(--lagoon-deep) 92%, var(--sea-ink) 8%);
+  background: linear-gradient(
+    165deg,
+    color-mix(in oklab, var(--surface-strong) 96%, white 4%),
+    var(--surface-strong)
+  );
+  box-shadow:
+    0 1px 2px rgba(23, 58, 64, 0.14),
+    0 2px 10px rgba(23, 58, 64, 0.12),
+    0 0 0 1px color-mix(in oklab, white 55%, transparent) inset;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.player-transport-seek:hover::-webkit-slider-thumb {
+  transform: scale(1.06);
+  box-shadow:
+    0 2px 4px rgba(23, 58, 64, 0.18),
+    0 4px 14px color-mix(in oklab, var(--lagoon) 35%, transparent),
+    0 0 0 1px color-mix(in oklab, white 55%, transparent) inset;
+}
+
+.player-transport-seek:active::-webkit-slider-thumb {
+  transform: scale(1.02);
+}
+
+.player-transport-seek::-moz-range-track {
+  height: var(--player-seek-track-h);
+  border-radius: 9999px;
+  background: var(--player-seek-rest);
+  box-shadow: 0 1px 2px rgba(23, 58, 64, 0.12) inset;
+}
+
+.player-transport-seek::-moz-range-progress {
+  height: var(--player-seek-track-h);
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--lagoon-deep), var(--lagoon));
+}
+
+.player-transport-seek::-moz-range-thumb {
+  width: var(--player-seek-thumb);
+  height: var(--player-seek-thumb);
+  border: 2px solid color-mix(in oklab, var(--lagoon-deep) 92%, var(--sea-ink) 8%);
+  border-radius: 50%;
+  background: linear-gradient(
+    165deg,
+    color-mix(in oklab, var(--surface-strong) 96%, white 4%),
+    var(--surface-strong)
+  );
+  box-shadow:
+    0 1px 2px rgba(23, 58, 64, 0.14),
+    0 2px 10px rgba(23, 58, 64, 0.12),
+    0 0 0 1px color-mix(in oklab, white 55%, transparent) inset;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.player-transport-seek:hover::-moz-range-thumb {
+  transform: scale(1.06);
+  box-shadow:
+    0 2px 4px rgba(23, 58, 64, 0.18),
+    0 4px 14px color-mix(in oklab, var(--lagoon) 35%, transparent),
+    0 0 0 1px color-mix(in oklab, white 55%, transparent) inset;
+}
+
+@media (min-width: 640px) {
+  .player-transport-seek {
+    --player-seek-track-h: 7px;
+    --player-seek-thumb: 16px;
+  }
+}
