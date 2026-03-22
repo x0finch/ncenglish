@@ -1,0 +1,20 @@
+{
+  "name": "nce-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test:run",
+    "test:run": "pnpm -r test:run",
+    "dev:app": "pnpm --filter @nce/app dev",
+    "build:app": "pnpm --filter @nce/app build",
+    "e2e:app": "pnpm --filter @nce/app e2e"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "typescript": "^5.7.2",
+    "vite": "^8.0.1",
+    "vitest": "^4.1.0"
+  }
+}
