@@ -1,0 +1,23 @@
+{
+  "name": "@nce/catalog",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./nce-r2-index.json": "./nce-r2-index.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vite": "^8.0.1",
+    "vitest": "^4.1.0"
+  }
+}
