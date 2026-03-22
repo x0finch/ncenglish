@@ -1,71 +1,61 @@
 # @nce/app
 
-TanStack Start + Vite + Cloudflare Workers front-end for the NCE player. Uses `@nce/catalog`, `@nce/player`, HeroUI v3, Tailwind v4, Zustand `persist`, and `vite-plugin-pwa` (static precache only).
+Vite + React + **TanStack Router** SPA for the NCE player. Uses `@nce/catalog`, `@nce/player`, HeroUI v3, Tailwind v4, Zustand `persist`, and `vite-plugin-pwa` (static precache only). Deploys as static files (e.g. **GitHub Pages**).
 
 ## Prerequisites
 
-- Node 22+ (TanStack Start engine field).
+- Node 22+.
 - pnpm at repo root.
-- Enough disk space for `workerd` / Wrangler install.
-- A **publicly reachable** origin for lesson media (R2 public bucket URL, R2 custom domain, or CDN) whose object paths match `nce-r2-index.json` (`mirrorRoot` + unit basenames).
+- A **public** origin for lesson media (R2 public URL, CDN, etc.) whose object paths match `nce-r2-index.json` (`mirrorRoot` + unit basenames).
 
 ## Environment
 
 | Variable | Purpose |
 |----------|---------|
-| **`VITE_NCE_MEDIA_BASE_URL`** | **Required** for working audio/LRC. Public origin only (no trailing slash), e.g. `https://pub-xxxxx.r2.dev` or your CDN. The app builds MP3/LRC/cover URLs as `{base}/{mirrorRoot}/…`. |
-| `VITE_NCE_LOG_MEDIA` | Set to `1` in `.env` to print **verbose** client logs in production builds (`catalog.init` baseUrl, resolved `audioUrl` / `lrcUrl`, parse counts). |
+| **`VITE_NCE_MEDIA_BASE_URL`** | **Required** for audio/LRC/cover. No trailing slash. URLs are `{base}/{mirrorRoot}/…`. |
+| `VITE_NCE_LOG_MEDIA` | `1` → verbose `[nce:media]` logs in production builds. |
+| **`VITE_BASE_PATH`** | **Build-time only** (read in `vite.config.ts`). Public path of the app, **with** leading slash and **trailing** slash, e.g. `/nceEnglish/` for `https://user.github.io/nceEnglish/`. Omit or use `/` for site root or local dev. |
 
-### Debug logs
+`pnpm build` also writes **`dist/404.html`** (copy of `index.html`) so **GitHub Pages** can serve deep links to routes like `/play/NCE1`.
 
-- **Browser console — `[nce:media]`** — **`warn`** on missing `VITE_NCE_MEDIA_BASE_URL`, LRC HTTP errors, `<audio>` errors, missing book/unit; **`info`** only in `pnpm dev` or when `VITE_NCE_LOG_MEDIA=1`.
+### CORS for `.lrc`
 
-There is **no** Worker `/media` proxy: the browser loads media directly from `VITE_NCE_MEDIA_BASE_URL`.
-
-### CORS for `.lrc` (required)
-
-MP3 is loaded with `<audio src>` and often **works without** CORS. Lyrics use **`fetch()`**, which **requires** the media host to allow your app origin.
-
-If DevTools shows `net::ERR_FAILED` or `Failed to fetch` while the request row still shows **200**, the response is almost certainly **blocked by CORS** (no usable `Access-Control-Allow-Origin` for your page).
-
-**Cloudflare R2:** open the bucket → **Settings** → **CORS policy** and add a rule, for example:
-
-```json
-[
-  {
-    "AllowedOrigins": [
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-      "https://YOUR-APP-DOMAIN"
-    ],
-    "AllowedMethods": ["GET", "HEAD"],
-    "AllowedHeaders": ["*"],
-    "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],
-    "MaxAgeSeconds": 3600
-  }
-]
-```
-
-Include every origin you use in the browser (check the address bar), e.g. `http://localhost:5173` if Vite picks that port. For a quick local test you may temporarily use `"AllowedOrigins": ["*"]` (avoid in production if you rely on cookie-based auth on the same bucket). After saving, retry with a hard refresh.
+Lyrics use `fetch()`; the media host must send `Access-Control-Allow-Origin` for your Pages URL. MP3 via `<audio>` often works without CORS. See your storage provider (e.g. R2 bucket CORS).
 
 ## Scripts (from `app/`)
 
 | Script | Description |
 |--------|-------------|
-| `pnpm dev` | Vite dev server (port **3000**). Loads `app/.env` and inlines `VITE_*` into the client bundle. |
-| `pnpm build` | Production build. |
-| `pnpm cf:build` | Same as `build` with `CF=1` set (alias for docs / CI parity). |
-| `pnpm cf:dev` | **`vite dev`** (same stack as Cloudflare’s TanStack Start guide): Worker + app in workerd, **with** Vite env — use this or `pnpm dev` so `VITE_NCE_MEDIA_BASE_URL` applies. |
-| `pnpm wrangler:dev` | Raw `wrangler dev` only: **does not** run Vite, so the browser may get **stale `dist/`** JS and ignore `.env`; media URLs can wrongly stay on `/media`. Prefer `pnpm cf:dev` / `pnpm dev`. |
-| `pnpm cf:deploy` | Build + `wrangler deploy`. |
+| `pnpm dev` | Vite dev (port **3000**). |
+| `pnpm build` | Production build to `dist/` + `404.html` SPA fallback. |
+| `pnpm preview` | Preview `dist/` locally (use same `VITE_BASE_PATH` as build if testing subpath). |
 | `pnpm typecheck` | `tsc --noEmit`. |
-| `pnpm test:run` | Vitest unit tests. |
-| `pnpm e2e` | Playwright smoke tests (starts dev server on 127.0.0.1:3000). |
+| `pnpm test:run` | Vitest. |
+| `pnpm e2e` | Playwright (starts Vite on 127.0.0.1:3000). |
+
+### GitHub Pages (project site)
+
+1. Repo **Settings → Pages**: source **GitHub Actions** (or deploy `dist/` from `gh-pages` branch).
+2. Build with base matching the repo name, e.g. `VITE_BASE_PATH=/my-repo/ pnpm build` from `app/`.
+3. Upload **`dist/`** contents to the hosting root for that path (Actions example below).
+
+Example **one-off** local build for repo `nceEnglish`:
+
+```bash
+cd app
+VITE_BASE_PATH=/nceEnglish/ pnpm build
+```
+
+Then publish `app/dist` as the Pages artifact for `https://<user>.github.io/nceEnglish/`.
+
+### GitHub Actions
+
+See [`.github/workflows/deploy-app.yml`](../../.github/workflows/deploy-app.yml) at monorepo root: builds the app with `VITE_BASE_PATH=/<repository-name>/` and uploads `dist` to Pages.
 
 ## PWA
 
-Production builds register a service worker via `vite-plugin-pwa` that precaches **built static assets** only—not lesson audio or LRC.
+The service worker precaches built static assets only—not lesson media.
 
 ## Route tree
 
-If `src/routeTree.gen.ts` is missing or out of date, run `pnpm dev` once; the TanStack Router plugin regenerates it from `src/routes/`.
+`src/routeTree.gen.ts` is generated by `@tanstack/router-plugin` when you run `pnpm dev` or `pnpm build`. Edit routes under `src/routes/` only.

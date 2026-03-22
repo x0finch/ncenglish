@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "pnpm --filter @nce/app dev",
+    "build": "pnpm --filter @nce/app build",
+    "e2e": "pnpm --filter @nce/app e2e",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test:run",
-    "test:run": "pnpm -r test:run",
-    "dev:app": "pnpm --filter @nce/app dev",
-    "build:app": "pnpm --filter @nce/app build",
-    "e2e:app": "pnpm --filter @nce/app e2e"
+    "test:run": "pnpm -r test:run"
   },
   "devDependencies": {
     "@types/node": "^22.19.1",

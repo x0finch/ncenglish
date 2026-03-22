@@ -5,7 +5,7 @@
 **NCE 播放器**是一款面向「新概念英语」学习者的**现代化听读网站**，交互与信息架构对标主流**音乐播放器**（曲库 / 播放队列 / 歌词同步 / 播放控制），降低认知成本，让用户专注在「选课 → 听 → 跟读」的闭环上。
 
 - **核心价值**：稳定、快速地播放已托管在自有 R2 上的音频与字幕资源；界面清晰、可键盘与触控友好操作。
-- **与旧版关系**：`NCE/` 目录为历史实现（Vanilla JS + `data.json`）；新版在仓库 **`ncEnglish/` 根下**以 **pnpm workspace（多包 monorepo）** 组织，应用包使用 **[TanStack Start](https://tanstack.com/start)**（基于 **Vite + React + TanStack Router** 的文件路由与 SSR 能力）重建，**部署目标为 [Cloudflare Workers](https://developers.cloudflare.com/workers/)**（`wrangler` + `@cloudflare/vite-plugin`），工程形态参考同级参考项目 **`oh-my-ethereum`**（示例路径：`…/agent-workplace/oh-my-ethereum`）。数据源仍为 **`nce-r2-index.json`（R2 资源索引 v2）**。
+- **与旧版关系**：`NCE/` 目录为历史实现（Vanilla JS + `data.json`）；新版在仓库 **`ncEnglish/` 根下**以 **pnpm workspace（多包 monorepo）** 组织，应用包为 **Vite + React + [TanStack Router](https://tanstack.com/router)** 的 **SPA**（无 SSR），**部署目标为静态托管**（如 **GitHub Pages**：`pnpm build` 产出 `dist/`，并复制 `index.html` 为 `404.html` 以支持前端路由）。数据源仍为 **`nce-r2-index.json`（R2 资源索引 v2）**。
 
 ## 2. 目标用户与典型场景
 
@@ -84,7 +84,7 @@
 
 ## 5. 信息架构与页面结构（建议）
 
-路由实现上与 TanStack Start 一致：**`app/src/routes/` 下文件即路由**（与参考项目相同约定）。
+路由实现上与 TanStack Router 文件路由约定一致：**`app/src/routes/` 下文件即路由**。
 
 ```
 /                    → 默认进入「上次册」或书库首页
@@ -92,7 +92,7 @@
 /play/$bookKey       → 播放页：单元列表 + 播放器 + 歌词（动态段命名遵循 TanStack Router 惯例）
 ```
 
-也可采用 query 补充状态：`/play/NCE1?unit=…`。深链接以 **path 参数优先** 时，利于分享与 SEO（SSR 输出同一 URL 的 HTML 壳层）。
+也可采用 query 补充状态：`/play/NCE1?unit=…`。深链接以 **path 参数优先** 时，利于分享；托管在子路径时需配置构建 **`base` / `VITE_BASE_PATH`** 与 R2 CORS 中的站点来源。
 
 ## 6. 技术选型（已定）
 
@@ -100,21 +100,16 @@
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 仓库组织      | [pnpm workspace](https://pnpm.io/workspaces)（**包级模块化**，单仓多 `package`）                                                                                                                                         |
 | 包管理        | [pnpm](https://pnpm.io/)                                                                                                                                                                                                 |
-| 全栈框架      | [TanStack Start](https://tanstack.com/start)（文件路由、SSR、与 TanStack Router 一体）                                                                                                                                   |
-| 构建工具      | [Vite](https://vitejs.dev/)（由 Start 插件链驱动；非「纯 SPA 手写 vite.config」模式）                                                                                                                                    |
-| 运行时 / 部署 | [Cloudflare Workers](https://developers.cloudflare.com/workers/) + [Wrangler](https://developers.cloudflare.com/workers/wrangler/) + [`@cloudflare/vite-plugin`](https://developers.cloudflare.com/workers/vite-plugin/) |
+| 路由          | [TanStack Router](https://tanstack.com/router)（文件路由 SPA，`@tanstack/router-plugin`）                                                                                                                                 |
+| 构建工具      | [Vite](https://vitejs.dev/)                                                                                                                                                                                              |
+| 运行时 / 部署 | 纯静态 **`dist/`**（如 [GitHub Pages](https://pages.github.com/)）；媒体为浏览器直连公开 URL                                                                                                                                |
 | UI 框架       | [React](https://react.dev/)                                                                                                                                                                                              |
 | 组件库        | [HeroUI](https://heroui.com/)（与 Tailwind 生态配合）                                                                                                                                                                    |
 | 样式          | [Tailwind CSS](https://tailwindcss.com/)                                                                                                                                                                                 |
 
-**参考实现（工程样板）**：本地仓库 **`oh-my-ethereum`** 中 `app/` 包展示了与本项目一致的串联方式，实现 NCE 时宜对照以下文件裁剪（无需 D1 等绑定可删除）：
+**说明**：HeroUI 负责按钮、列表、选择器、Sheet/Modal、主题等基础组件；播放器进度条、歌词滚动区域可在其之上做轻量定制。React 主版本须与 HeroUI 官方要求对齐。
 
-- `app/vite.config.ts`：`tanstackStart()`；在 `CF=1` 时 `unshift` `cloudflare({ viteEnvironment: { name: "ssr" }, … })`
-- `app/worker-entry.ts`：动态 `import("@tanstack/react-start/server-entry")`，导出 Worker `fetch` 处理器
-- `app/wrangler.jsonc`：`main` 指向上述 worker 入口、`compatibility_date` / `compatibility_flags`（如 `nodejs_compat`）等
-- `app/package.json`：`cf:dev` / `cf:build` / `cf:deploy`（`CF=1 vite build` 后与 `wrangler deploy` 衔接，具体以参考项目与 Start 版本文档为准）
-
-**说明**：HeroUI 负责按钮、列表、选择器、Sheet/Modal、主题等基础组件；播放器进度条、歌词滚动区域可在其之上做轻量定制，以保持「音乐 App」质感。React 主版本以脚手架生成时为准，须与 HeroUI、Start 官方要求对齐。
+**GitHub Pages**：构建时设置 `VITE_BASE_PATH=/<仓库名>/`（与 Pages 的 project site 路径一致）；仓库可提供 GitHub Actions 将 `app/dist` 部署到 Pages。
 
 ## 7. pnpm 级模块化（monorepo 结构）
 
@@ -123,7 +118,7 @@
 ### 7.1 约定
 
 - **仓库根**：`pnpm-workspace.yaml` 声明 `app`、`packages/*`（或等价 glob）。
-- **应用包（deployable）**：**`app/`**，TanStack Start 应用 + Cloudflare Worker 入口；包含 `src/routes`、Vite 配置、Worker 封装与 `wrangler` 配置；挂载根路由、HeroUI Provider、Tailwind 入口。
+- **应用包（deployable）**：**`app/`**，Vite + React + TanStack Router SPA；包含 `src/routes`、`index.html`、`vite.config.ts`；根布局挂载 Header、路由出口、Tailwind 入口。
 - **库包（internal）**：使用 `workspace:*` 互相引用；**默认不发布 npm**（`private: true`），除非日后单独开源某个包。
 - **依赖方向**：`app` → 各 `packages/*`；**库包之间禁止环依赖**；与 React 无关的逻辑放在 **无 `react` 依赖** 的包中，便于单元测试与复用。
 

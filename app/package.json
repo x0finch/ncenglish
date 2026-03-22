@@ -7,11 +7,7 @@
   },
   "scripts": {
     "dev": "vite dev --port 3000",
-    "build": "vite build",
-    "cf:build": "CF=1 vite build",
-    "cf:dev": "vite dev",
-    "wrangler:dev": "wrangler dev",
-    "cf:deploy": "pnpm run cf:build && wrangler deploy",
+    "build": "vite build && node ./scripts/spa-fallback.mjs",
     "preview": "vite preview --port 4173 --strictPort",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
@@ -19,7 +15,6 @@
     "e2e": "playwright test"
   },
   "dependencies": {
-    "@cloudflare/vite-plugin": "^1.26.0",
     "@heroui/react": "latest",
     "@heroui/styles": "latest",
     "@nce/catalog": "workspace:*",
@@ -28,8 +23,6 @@
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "latest",
     "@tanstack/react-router-devtools": "latest",
-    "@tanstack/react-router-ssr-query": "latest",
-    "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "^1.132.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -37,7 +30,6 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250321.0",
     "@playwright/test": "^1.52.0",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/devtools-vite": "latest",
@@ -52,7 +44,6 @@
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^1.2.0",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.0.5",
-    "wrangler": "^4.70.0"
+    "vitest": "^3.0.5"
   }
 }
