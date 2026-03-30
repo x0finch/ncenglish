@@ -112,25 +112,25 @@ function translationModeUi(mode: TranslationMode): {
   switch (mode) {
     case "show":
       return {
-        title: "Chinese subtitles: visible (next: hidden)",
+        title: "Bilingual focus: clear Chinese on current line only (next: English focus)",
         ariaLabel:
-          "Chinese subtitles visible; click to hide Chinese or cycle display mode",
+          "Lyrics show English plus Chinese on all lines; only the current line has sharp Chinese. Click to cycle display mode",
         icon: <Globe className="size-4" aria-hidden />,
         buttonClass: "text-primary",
       };
     case "hide":
       return {
-        title: "Chinese subtitles: hidden (next: blurred)",
+        title: "English focus: all Chinese blurred until hover (next: full blur)",
         ariaLabel:
-          "Chinese subtitles hidden; click to blur Chinese or cycle display mode",
+          "Lyrics show English and Chinese; Chinese is blurred until hover. Click to cycle display mode",
         icon: <GlobeOff className="size-4" aria-hidden />,
         buttonClass: "text-muted-foreground hover:text-foreground",
       };
     case "blur":
       return {
-        title: "Lyrics blurred until hover (next: visible)",
+        title: "Full blur: English and Chinese until hover (next: bilingual focus)",
         ariaLabel:
-          "English and Chinese lyrics blurred until hover; click to show clearly or cycle display mode",
+          "English and Chinese lyrics blurred until hover; click to cycle display mode",
         icon: <EyeClosed className="size-4" aria-hidden />,
         buttonClass: "text-muted-foreground hover:text-foreground",
       };

@@ -628,6 +628,12 @@ function LyricsInteractionTips() {
   );
 }
 
+const lyricBlurClass = "blur-sm transition hover:blur-none";
+
+function lineHasChinese(line: LyricLine): boolean {
+  return line.chinese.trim().length > 0;
+}
+
 function LyricsColumn({
   lyricsStatus,
   lyricsError,
@@ -665,48 +671,62 @@ function LyricsColumn({
           <p className="text-sm opacity-70">No lyric lines.</p>
         )}
         <ul className="list-none space-y-1 p-0 md:space-y-1.5">
-          {lyricLines.map((line, i) => (
-            <li
-              key={`${line.timeSec}-${line.english.slice(0, 24)}`}
-              id={`lyric-line-${i}`}
-            >
-              <button
-                type="button"
-                onClick={() => onLyricLineClick(i, line.timeSec)}
-                className={cn(
-                  "w-full cursor-pointer rounded-lg border px-2 py-2 text-left font-[inherit] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation md:px-3 md:py-2.5",
-                  i === activeLyric
-                    ? "border-transparent bg-primary/15 font-semibold text-primary shadow-sm"
-                    : "border-transparent bg-transparent opacity-80 hover:bg-accent",
-                )}
-                aria-label={`Seek to ${formatMediaTime(line.timeSec)}: ${line.english.slice(0, 120)}. Double-click the same line to pause when it ends.`}
-                title="Double-click this line (twice quickly) to pause when this line ends."
-              >
-                <span className="text-xs opacity-50 tabular-nums">
-                  {formatMediaTime(line.timeSec)}
-                </span>
-                {translationMode === "blur" ? (
-                  <div className="blur-sm transition hover:blur-none">
-                    <div>{line.english}</div>
-                    {line.chinese ? (
-                      <div className="mt-0.5 text-sm opacity-75">
-                        {line.chinese}
-                      </div>
-                    ) : null}
+          {lyricLines.map((line, i) => {
+            const hasCn = lineHasChinese(line);
+            const isActive = activeLyric >= 0 && i === activeLyric;
+            /** show: only active line has clear Chinese; hide: all Chinese blurred; blur: whole-line wrapper only */
+            const blurChineseOnly =
+              translationMode !== "blur" &&
+              hasCn &&
+              (translationMode === "hide" ||
+                (translationMode === "show" && !isActive));
+            const blurWholeLine = translationMode === "blur";
+
+            const textBlock = (
+              <>
+                <div>{line.english}</div>
+                {hasCn ? (
+                  <div
+                    className={cn(
+                      "mt-0.5 text-sm opacity-75",
+                      blurChineseOnly && lyricBlurClass,
+                    )}
+                  >
+                    {line.chinese}
                   </div>
-                ) : (
-                  <>
-                    <div>{line.english}</div>
-                    {translationMode !== "hide" && line.chinese ? (
-                      <div className="mt-0.5 text-sm opacity-75">
-                        {line.chinese}
-                      </div>
-                    ) : null}
-                  </>
-                )}
-              </button>
-            </li>
-          ))}
+                ) : null}
+              </>
+            );
+
+            return (
+              <li
+                key={`${line.timeSec}-${line.english.slice(0, 24)}`}
+                id={`lyric-line-${i}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => onLyricLineClick(i, line.timeSec)}
+                  className={cn(
+                    "w-full cursor-pointer rounded-lg border px-2 py-2 text-left font-[inherit] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation md:px-3 md:py-2.5",
+                    i === activeLyric
+                      ? "border-transparent bg-primary/15 font-semibold text-primary shadow-sm"
+                      : "border-transparent bg-transparent opacity-80 hover:bg-accent",
+                  )}
+                  aria-label={`Seek to ${formatMediaTime(line.timeSec)}: ${line.english.slice(0, 120)}. Double-click the same line to pause when it ends.`}
+                  title="Double-click this line (twice quickly) to pause when this line ends."
+                >
+                  <span className="text-xs opacity-50 tabular-nums">
+                    {formatMediaTime(line.timeSec)}
+                  </span>
+                  {blurWholeLine ? (
+                    <div className={lyricBlurClass}>{textBlock}</div>
+                  ) : (
+                    textBlock
+                  )}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>
