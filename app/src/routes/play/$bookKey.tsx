@@ -1,5 +1,6 @@
 import catalog from "@nce/catalog";
 import type { LyricLine } from "@nce/catalog";
+import type { TrackPlayMode } from "@nce/player";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ListMusic } from "lucide-react";
 import {
@@ -28,7 +29,10 @@ import {
 import { useIsMobile } from "#/hooks/use-mobile.ts";
 import { formatMediaTime } from "#/lib/format-media-time.ts";
 import { cn } from "#/lib/utils.ts";
-import { PlayerTransportControls } from "../../features/player/player-transport.tsx";
+import {
+  PlayerTransportControls,
+  TransportExtraCluster,
+} from "../../features/player/player-transport.tsx";
 import { useNceStore } from "../../features/player/nce-store.ts";
 import { logMediaInfo, logMediaWarn } from "../../lib/client-media-log.ts";
 
@@ -439,6 +443,11 @@ function PlayPage() {
               lyricLines={lyricLines}
               activeLyric={activeLyric}
               translationMode={translationMode}
+              playbackRate={playbackRate}
+              onCyclePlaybackRate={cyclePlaybackRate}
+              trackPlayMode={trackPlayMode}
+              onCycleTrackPlayMode={cycleTrackPlayMode}
+              onCycleTranslationMode={cycleTranslationMode}
               onLyricLineClick={handleLyricLineClick}
             />
           </div>
@@ -449,6 +458,8 @@ function PlayPage() {
                 <PlayerTransportControls
                   {...transportProps}
                   dock={isMobile}
+                  showTrackInfo={false}
+                  showExtraCluster={false}
                 />
               </div>
             </div>
@@ -519,6 +530,11 @@ function LyricsColumn({
   lyricLines,
   activeLyric,
   translationMode,
+  playbackRate,
+  onCyclePlaybackRate,
+  trackPlayMode,
+  onCycleTrackPlayMode,
+  onCycleTranslationMode,
   onLyricLineClick,
 }: {
   lessonTitle: string;
@@ -527,14 +543,34 @@ function LyricsColumn({
   lyricLines: readonly LyricLine[];
   activeLyric: number;
   translationMode: "show" | "hide" | "blur";
+  playbackRate: number;
+  onCyclePlaybackRate: () => void;
+  trackPlayMode: TrackPlayMode;
+  onCycleTrackPlayMode: () => void;
+  onCycleTranslationMode: () => void;
   onLyricLineClick: (lineIndex: number, timeSec: number) => void;
 }) {
+  const isRepeatOne = trackPlayMode === "repeatOne";
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-0 md:px-0 md:pb-4 md:pr-2">
-        <h2 className="mx-auto max-w-2xl px-1 py-6 text-center text-lg font-semibold leading-snug tracking-tight text-pretty text-foreground md:py-9 md:text-xl">
+      <div className="shrink-0 px-3 pb-3 pt-0 md:px-0 md:pb-4">
+        <h2 className="mx-auto max-w-2xl px-1 py-6 text-center text-lg font-semibold leading-snug tracking-tight text-pretty text-foreground md:py-6 md:text-xl">
           {lessonTitle}
         </h2>
+        <div className="flex justify-center">
+          <TransportExtraCluster
+            playbackRate={playbackRate}
+            onCyclePlaybackRate={onCyclePlaybackRate}
+            isRepeatOne={isRepeatOne}
+            onCycleTrackPlayMode={onCycleTrackPlayMode}
+            onCycleTranslationMode={onCycleTranslationMode}
+            translationMode={translationMode}
+            className="justify-center"
+          />
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-0 md:px-0 md:pb-4 md:pr-2">
         {lyricsStatus === "loading" && (
           <p className="text-sm opacity-70">Loading lyrics…</p>
         )}

@@ -38,6 +38,8 @@ export type PlayerTransportControlsProps = {
   coverUrl?: string | null;
   /** When false, hide artwork + titles (e.g. mobile sheet already shows them). Default true. */
   showTrackInfo?: boolean;
+  /** When false, hide speed / repeat / translation controls (e.g. rendered above lyrics). Default true. */
+  showExtraCluster?: boolean;
   /** Tighter layout: play + rate/repeat/translation on one row (fixed mobile dock). */
   dock?: boolean;
 };
@@ -55,49 +57,63 @@ function TransportPlayCluster({
   onNext: () => void;
   className?: string;
 }) {
+  /** Apple Music–style: circular skips with light typography-like strokes; large filled play circle. */
+  const skipIconCls = "size-[1.0625rem] sm:size-[1.1875rem]";
+  const skipStroke = 1.35;
+
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-center gap-1 sm:gap-2",
+        "flex shrink-0 items-center justify-center gap-5 sm:gap-8",
         className,
       )}
     >
       <Button
         type="button"
         variant="ghost"
-        size="icon-sm"
-        className="text-muted-foreground hover:text-foreground"
+        className="size-10 rounded-full text-muted-foreground transition-[color,transform,background-color] hover:bg-muted/85 hover:text-foreground active:scale-[0.96] sm:size-11"
         onClick={onPrev}
         aria-label="Previous lesson"
       >
-        <SkipBack className="size-5" aria-hidden />
+        <SkipBack
+          className={skipIconCls}
+          strokeWidth={skipStroke}
+          aria-hidden
+        />
       </Button>
       <Button
         type="button"
         variant="default"
-        className="size-11 shrink-0 rounded-full shadow-md sm:size-12"
+        className="flex size-13 shrink-0 items-center justify-center rounded-full shadow-md transition-[transform,box-shadow] active:scale-[0.96] sm:size-16 sm:shadow-lg"
         onClick={onTogglePlay}
         aria-label={paused ? "Play" : "Pause"}
       >
         {paused ? (
           <Play
-            className="size-5 translate-x-0.5 sm:size-[1.35rem]"
-            fill="currentColor"
+            className="size-4.75 translate-x-0.75 fill-current sm:size-6 sm:translate-x-0.5"
+            strokeWidth={0}
             aria-hidden
           />
         ) : (
-          <Pause className="size-5 sm:size-[1.35rem]" aria-hidden />
+          <Pause
+            className="size-4.75 sm:size-6"
+            strokeWidth={2.35}
+            aria-hidden
+          />
         )}
       </Button>
       <Button
         type="button"
         variant="ghost"
-        size="icon-sm"
-        className="text-muted-foreground hover:text-foreground"
+        className="size-10 rounded-full text-muted-foreground transition-[color,transform,background-color] hover:bg-muted/85 hover:text-foreground active:scale-[0.96] sm:size-11"
         onClick={onNext}
         aria-label="Next lesson"
       >
-        <SkipForward className="size-5" aria-hidden />
+        <SkipForward
+          className={skipIconCls}
+          strokeWidth={skipStroke}
+          aria-hidden
+        />
       </Button>
     </div>
   );
@@ -106,6 +122,7 @@ function TransportPlayCluster({
 function translationModeUi(mode: TranslationMode): {
   title: string;
   ariaLabel: string;
+  shortLabel: string;
   icon: ReactNode;
   buttonClass: string;
 } {
@@ -115,7 +132,8 @@ function translationModeUi(mode: TranslationMode): {
         title: "Bilingual focus: clear Chinese on current line only (next: English focus)",
         ariaLabel:
           "Lyrics show English plus Chinese on all lines; only the current line has sharp Chinese. Click to cycle display mode",
-        icon: <Globe className="size-4" aria-hidden />,
+        shortLabel: "Bilingual",
+        icon: <Globe className="size-3.5 shrink-0" aria-hidden />,
         buttonClass: "text-primary",
       };
     case "hide":
@@ -123,7 +141,8 @@ function translationModeUi(mode: TranslationMode): {
         title: "English focus: all Chinese blurred until hover (next: full blur)",
         ariaLabel:
           "Lyrics show English and Chinese; Chinese is blurred until hover. Click to cycle display mode",
-        icon: <GlobeOff className="size-4" aria-hidden />,
+        shortLabel: "English",
+        icon: <GlobeOff className="size-3.5 shrink-0" aria-hidden />,
         buttonClass: "text-muted-foreground hover:text-foreground",
       };
     case "blur":
@@ -131,13 +150,14 @@ function translationModeUi(mode: TranslationMode): {
         title: "Full blur: English and Chinese until hover (next: bilingual focus)",
         ariaLabel:
           "English and Chinese lyrics blurred until hover; click to cycle display mode",
-        icon: <EyeClosed className="size-4" aria-hidden />,
+        shortLabel: "Blur",
+        icon: <EyeClosed className="size-3.5 shrink-0" aria-hidden />,
         buttonClass: "text-muted-foreground hover:text-foreground",
       };
   }
 }
 
-function TransportExtraCluster({
+export function TransportExtraCluster({
   playbackRate,
   onCyclePlaybackRate,
   isRepeatOne,
@@ -156,10 +176,10 @@ function TransportExtraCluster({
 }) {
   const tr = translationModeUi(translationMode);
   return (
-    <div className={cn("flex items-center gap-0.5 sm:gap-1", className)}>
+    <div className={cn("flex items-center gap-2 sm:gap-3", className)}>
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="sm"
         className="h-8 gap-1 px-2 text-muted-foreground hover:text-foreground"
         onClick={onCyclePlaybackRate}
@@ -173,11 +193,11 @@ function TransportExtraCluster({
       </Button>
       <Button
         type="button"
-        variant="ghost"
-        size="icon-sm"
+        variant="outline"
+        size="sm"
         className={cn(
-          "text-muted-foreground hover:text-foreground",
-          isRepeatOne && "text-primary",
+          "h-8 gap-1 px-2 text-muted-foreground hover:text-foreground",
+          isRepeatOne && "text-primary border-primary/50",
         )}
         onClick={onCycleTrackPlayMode}
         title={isRepeatOne ? "Repeat one" : "Sequential"}
@@ -188,21 +208,29 @@ function TransportExtraCluster({
         }
       >
         {isRepeatOne ? (
-          <Repeat1 className="size-4" aria-hidden />
+          <Repeat1 className="size-3.5 shrink-0" aria-hidden />
         ) : (
-          <ListOrdered className="size-4" aria-hidden />
+          <ListOrdered className="size-3.5 shrink-0" aria-hidden />
         )}
+        <span className="text-[0.7rem] font-semibold">
+          {isRepeatOne ? "Repeat" : "Sequential"}
+        </span>
       </Button>
       <Button
         type="button"
-        variant="ghost"
-        size="icon-sm"
-        className={tr.buttonClass}
+        variant="outline"
+        size="sm"
+        className={cn(
+          "h-8 gap-1 px-2",
+          tr.buttonClass,
+          translationMode === "show" && "border-primary/50",
+        )}
         onClick={onCycleTranslationMode}
         title={tr.title}
         aria-label={tr.ariaLabel}
       >
         {tr.icon}
+        <span className="text-[0.7rem] font-semibold">{tr.shortLabel}</span>
       </Button>
     </div>
   );
@@ -226,6 +254,7 @@ export function PlayerTransportControls({
   bookTitle,
   coverUrl,
   showTrackInfo = true,
+  showExtraCluster = true,
   dock = false,
 }: PlayerTransportControlsProps) {
   const isRepeatOne = trackPlayMode === "repeatOne";
@@ -272,15 +301,19 @@ export function PlayerTransportControls({
               onNext={onNext}
               className="justify-self-center"
             />
-            <TransportExtraCluster
-              playbackRate={playbackRate}
-              onCyclePlaybackRate={onCyclePlaybackRate}
-              isRepeatOne={isRepeatOne}
-              onCycleTrackPlayMode={onCycleTrackPlayMode}
-              onCycleTranslationMode={onCycleTranslationMode}
-              translationMode={translationMode}
-              className="min-w-0 justify-self-end"
-            />
+            {showExtraCluster ? (
+              <TransportExtraCluster
+                playbackRate={playbackRate}
+                onCyclePlaybackRate={onCyclePlaybackRate}
+                isRepeatOne={isRepeatOne}
+                onCycleTrackPlayMode={onCycleTrackPlayMode}
+                onCycleTranslationMode={onCycleTranslationMode}
+                translationMode={translationMode}
+                className="min-w-0 justify-self-end"
+              />
+            ) : (
+              <div className="min-w-0" aria-hidden />
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-x-4">
@@ -304,15 +337,19 @@ export function PlayerTransportControls({
               className="sm:justify-self-center"
             />
 
-            <TransportExtraCluster
-              playbackRate={playbackRate}
-              onCyclePlaybackRate={onCyclePlaybackRate}
-              isRepeatOne={isRepeatOne}
-              onCycleTrackPlayMode={onCycleTrackPlayMode}
-              onCycleTranslationMode={onCycleTranslationMode}
-              translationMode={translationMode}
-              className="justify-center sm:justify-self-end"
-            />
+            {showExtraCluster ? (
+              <TransportExtraCluster
+                playbackRate={playbackRate}
+                onCyclePlaybackRate={onCyclePlaybackRate}
+                isRepeatOne={isRepeatOne}
+                onCycleTrackPlayMode={onCycleTrackPlayMode}
+                onCycleTranslationMode={onCycleTranslationMode}
+                translationMode={translationMode}
+                className="justify-center sm:justify-self-end"
+              />
+            ) : (
+              <div className="hidden sm:block" aria-hidden />
+            )}
           </div>
         )
       ) : (
@@ -324,15 +361,17 @@ export function PlayerTransportControls({
             onNext={onNext}
             className="justify-center"
           />
-          <TransportExtraCluster
-            playbackRate={playbackRate}
-            onCyclePlaybackRate={onCyclePlaybackRate}
-            isRepeatOne={isRepeatOne}
-            onCycleTrackPlayMode={onCycleTrackPlayMode}
-            onCycleTranslationMode={onCycleTranslationMode}
-            translationMode={translationMode}
-            className="justify-center"
-          />
+          {showExtraCluster ? (
+            <TransportExtraCluster
+              playbackRate={playbackRate}
+              onCyclePlaybackRate={onCyclePlaybackRate}
+              isRepeatOne={isRepeatOne}
+              onCycleTrackPlayMode={onCycleTrackPlayMode}
+              onCycleTranslationMode={onCycleTranslationMode}
+              translationMode={translationMode}
+              className="justify-center"
+            />
+          ) : null}
         </div>
       )}
     </div>
