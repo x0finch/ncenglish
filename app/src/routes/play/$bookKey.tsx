@@ -405,16 +405,18 @@ function PlayPage() {
             />
           </div>
           <div className="shrink-0 border-t border-border bg-background px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:px-6 md:pb-4">
-            <div className="nce-page-wrap mx-auto flex w-full max-w-[1600px] items-start gap-2">
-              <SidebarTrigger className="shrink-0 md:hidden" />
-              <div className="min-w-0 flex-1">
-                <PlayerTransportControls
-                  {...transportProps}
-                  dock={isMobile}
-                  showTrackInfo={false}
-                  showExtraCluster={false}
-                />
-              </div>
+            <div className="nce-page-wrap mx-auto w-full max-w-[1600px]">
+              <PlayerTransportControls
+                {...transportProps}
+                dock={isMobile}
+                showTrackInfo={false}
+                showExtraCluster={false}
+                dockLeadingOverlay={
+                  isMobile ? (
+                    <SidebarTrigger className="shrink-0 md:hidden" />
+                  ) : undefined
+                }
+              />
             </div>
           </div>
         </div>
