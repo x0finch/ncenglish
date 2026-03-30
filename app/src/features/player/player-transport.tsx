@@ -44,11 +44,6 @@ export type PlayerTransportControlsProps = {
   showExtraCluster?: boolean;
   /** Tighter layout: play + rate/repeat/translation on one row (fixed mobile dock). */
   dock?: boolean;
-  /**
-   * When `dock` is true and `showTrackInfo` is false, render in the play-cluster row on the
-   * left; center column uses `1fr | auto | 1fr` so prev/play/next stay visually centered.
-   */
-  dockLeadingOverlay?: ReactNode;
 };
 
 function TransportPlayCluster({
@@ -100,13 +95,13 @@ function TransportPlayCluster({
       <Button
         type="button"
         variant="default"
-        className="flex size-13 shrink-0 items-center justify-center rounded-full shadow-md transition-[transform,box-shadow] active:scale-[0.96] sm:size-16 sm:shadow-lg"
+        className="grid size-13 shrink-0 place-items-center rounded-full leading-none shadow-md transition-[transform,box-shadow] active:scale-[0.96] sm:size-16 sm:shadow-lg [&>svg]:block"
         onClick={onTogglePlay}
         aria-label={paused ? "Play" : "Pause"}
       >
         {paused ? (
           <Play
-            className="size-4.75 translate-x-0.75 fill-current sm:size-6 sm:translate-x-0.5"
+            className="size-4.75 translate-x-[2px] fill-current sm:size-6 sm:translate-x-[3px]"
             strokeWidth={0}
             aria-hidden
           />
@@ -313,7 +308,6 @@ export function PlayerTransportControls({
   showTrackInfo = true,
   showExtraCluster = true,
   dock = false,
-  dockLeadingOverlay,
 }: PlayerTransportControlsProps) {
   const dur = duration || 0;
   const t = Math.min(mediaTime, dur || 0);
@@ -413,34 +407,16 @@ export function PlayerTransportControls({
         )
       ) : (
         <div className="flex flex-col gap-3">
-          {dock && dockLeadingOverlay ? (
-            <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center">
-              {/* Match LyricsColumn scroll area: nce-page-wrap px-3 + inner px-3 on mobile */}
-              <div className="flex min-w-0 justify-start pl-3">
-                {dockLeadingOverlay}
-              </div>
-              <TransportPlayCluster
-                paused={paused}
-                onTogglePlay={onTogglePlay}
-                onPrev={onPrev}
-                onNext={onNext}
-                trackPlayMode={trackPlayMode}
-                className="justify-center"
-              />
-              <span className="min-w-0 shrink-0 pr-3" aria-hidden />
-            </div>
-          ) : (
-            <div className="w-full">
-              <TransportPlayCluster
-                paused={paused}
-                onTogglePlay={onTogglePlay}
-                onPrev={onPrev}
-                onNext={onNext}
-                trackPlayMode={trackPlayMode}
-                className="justify-center"
-              />
-            </div>
-          )}
+          <div className="w-full">
+            <TransportPlayCluster
+              paused={paused}
+              onTogglePlay={onTogglePlay}
+              onPrev={onPrev}
+              onNext={onNext}
+              trackPlayMode={trackPlayMode}
+              className="justify-center"
+            />
+          </div>
           {showExtraCluster ? (
             <TransportExtraCluster
               playbackRate={playbackRate}

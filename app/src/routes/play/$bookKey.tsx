@@ -411,11 +411,6 @@ function PlayPage() {
                 dock={isMobile}
                 showTrackInfo={false}
                 showExtraCluster={false}
-                dockLeadingOverlay={
-                  isMobile ? (
-                    <SidebarTrigger className="shrink-0 md:hidden" />
-                  ) : undefined
-                }
               />
             </div>
           </div>
@@ -547,6 +542,7 @@ function LyricsColumn({
   onCycleLyricClickMode: () => void;
   onLyricLineClick: (lineIndex: number, timeSec: number) => void;
 }) {
+  const isMobileHeader = useIsMobile();
   const lineTapHint =
     lyricClickMode === "jumpOnly"
       ? "Seek and play; does not pause after this line ends."
@@ -555,9 +551,23 @@ function LyricsColumn({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 px-3 pb-3 pt-0 md:px-0 md:pb-4">
-        <h2 className="mx-auto max-w-2xl px-1 py-6 text-center text-lg font-semibold leading-snug tracking-tight text-pretty text-foreground md:py-6 md:text-xl">
-          {lessonTitle}
-        </h2>
+        <div className="mx-auto max-w-2xl">
+          <div className="flex items-center gap-2 md:contents">
+            {isMobileHeader ? (
+              <SidebarTrigger className="shrink-0 md:hidden" />
+            ) : null}
+            <h2
+              className={cn(
+                "min-w-0 flex-1 px-0 py-6 text-center text-lg font-semibold leading-snug tracking-tight text-pretty text-foreground sm:px-1 md:block md:flex-none md:px-1 md:py-6 md:text-xl",
+                // Optical center under max-md: shift left by half of trigger (32px) + gap (8px); ps-2 keeps text off the control
+                isMobileHeader &&
+                  "max-md:-translate-x-[20px] max-md:ps-2",
+              )}
+            >
+              {lessonTitle}
+            </h2>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
           <TransportExtraCluster
             playbackRate={playbackRate}
