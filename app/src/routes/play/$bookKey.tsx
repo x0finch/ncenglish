@@ -1,24 +1,31 @@
 import catalog from "@nce/catalog";
 import type { LyricLine } from "@nce/catalog";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AlertCircle, ChevronDown, ListMusic } from "lucide-react";
+import { ListMusic } from "lucide-react";
 import {
   useCallback,
   useEffect,
-  useId,
   useRef,
   useState,
-  type CSSProperties,
   type SyntheticEvent,
 } from "react";
-import { createPortal } from "react-dom";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "#/components/ui/drawer.tsx";
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+  useSidebar,
+} from "#/components/ui/sidebar.tsx";
+import { useIsMobile } from "#/hooks/use-mobile.ts";
 import { formatMediaTime } from "#/lib/format-media-time.ts";
 import { cn } from "#/lib/utils.ts";
 import { PlayerTransportControls } from "../../features/player/player-transport.tsx";
@@ -39,7 +46,17 @@ export const Route = createFileRoute("/play/$bookKey")({
 /** Second click on the same lyric line within this window arms pause-at-end-of-line. */
 const LYRIC_DOUBLE_CLICK_MS = 450;
 
+/** Strip only real audio extensions; lesson names like `001&002.Excuse Me` must stay intact. */
+const AUDIO_FILE_EXT = /\.(aac|flac|m4a|mp3|ogg|opus|wav|wma)$/i;
+
+function lessonDisplayName(entry: string | undefined): string {
+  if (!entry?.trim()) return "—";
+  const s = entry.replace(AUDIO_FILE_EXT, "").trim();
+  return s || "—";
+}
+
 function PlayPage() {
+  const isMobile = useIsMobile();
   const { bookKey } = Route.useParams();
   const { unit: unitFromUrl } = Route.useSearch();
   const navigate = useNavigate();
@@ -69,8 +86,6 @@ function PlayPage() {
   const armPauseAfterLine = useNceStore((s) => s.armPauseAfterLine);
   const clearPauseAfterLine = useNceStore((s) => s.clearPauseAfterLine);
 
-  const [lessonsDrawerOpen, setLessonsDrawerOpen] = useState(false);
-  const drawerSelectedLessonRef = useRef<HTMLButtonElement | null>(null);
   const lyricDoubleClickRef = useRef<{ lineIndex: number; t: number } | null>(
     null,
   );
@@ -201,23 +216,6 @@ function PlayPage() {
       el.removeEventListener("pause", sync);
     };
   }, [bookKey, unitIndex]);
-
-  useEffect(() => {
-    if (!lessonsDrawerOpen) return;
-    const scrollToSelected = () => {
-      drawerSelectedLessonRef.current?.scrollIntoView({
-        block: "center",
-        inline: "nearest",
-        behavior: "auto",
-      });
-    };
-    const t0 = window.setTimeout(scrollToSelected, 0);
-    const t1 = window.setTimeout(scrollToSelected, 120);
-    return () => {
-      window.clearTimeout(t0);
-      window.clearTimeout(t1);
-    };
-  }, [lessonsDrawerOpen, unitIndex]);
 
   const activeLyric = catalog.activeLyricIndex(lyricLines, mediaTime);
 
@@ -356,8 +354,7 @@ function PlayPage() {
 
   const book = catalog.getBook(bookKey);
   const units = book ? catalog.listUnits(bookKey) : [];
-  const currentTitle =
-    units[unitIndex]?.entry.replace(/\.[^.]+$/, "") ?? "—";
+  const currentTitle = lessonDisplayName(units[unitIndex]?.entry);
 
   let coverUrl: string | null = null;
   try {
@@ -385,122 +382,58 @@ function PlayPage() {
     coverUrl,
   };
 
-  /* Reserve space for fixed transport; mobile adds extra above Safari toolbar (beyond safe-area). */
-  const bottomPad =
-    "pb-[calc(7.75rem+env(safe-area-inset-bottom))] md:pb-[calc(8.75rem+env(safe-area-inset-bottom))]";
-
   return (
-    <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
-      <main
-        className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-2 pt-2 ${bottomPad} md:px-4 md:pt-4`}
-      >
-        <audio
-          ref={audioRef}
-          className="hidden"
-          controls={false}
-          onTimeUpdate={onAudioTimeUpdate}
-          onDurationChange={(e) => setDuration(e.currentTarget.duration || 0)}
-          onPlay={() => setPaused(false)}
-          onPause={() => setPaused(true)}
-          onEnded={onEnded}
-        />
+    <SidebarProvider className="flex min-h-0! w-full flex-1 flex-col">
+      <audio
+        ref={audioRef}
+        className="hidden"
+        controls={false}
+        onTimeUpdate={onAudioTimeUpdate}
+        onDurationChange={(e) => setDuration(e.currentTarget.duration || 0)}
+        onPlay={() => setPaused(false)}
+        onPause={() => setPaused(true)}
+        onEnded={onEnded}
+      />
 
-        <div
-          className="nce-page-wrap grid min-h-0 w-full min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden md:max-w-[1600px] md:grid-cols-[minmax(200px,280px)_minmax(0,1fr)] md:grid-rows-1 md:gap-6"
-        >
-        <aside className="flex shrink-0 flex-col md:h-full md:min-h-0 md:shrink md:overflow-hidden md:border-r md:border-border md:pr-4">
-          {/* Narrow screens: bottom drawer for lesson list */}
-          <div className="md:hidden">
-            <h2 className="mb-1 pl-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Lessons
-            </h2>
-            {units.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground">
-                No lessons.
+      {/* Sidebar + inset must be siblings in a row so inset peer styles and widths work (Shadcn dashboard). */}
+      <div className="flex min-h-0 min-w-0 w-full flex-1 flex-row overflow-hidden">
+      <Sidebar collapsible="icon" variant="inset">
+        <SidebarHeader className="border-b border-sidebar-border">
+          <button
+            type="button"
+            onClick={() => void navigate({ to: "/library" })}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left ring-sidebar-ring outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2"
+            aria-label="Back to library"
+          >
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <ListMusic className="size-4" aria-hidden />
+            </div>
+            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">
+                {book?.title ?? "—"}
               </p>
-            ) : (
-              <Drawer open={lessonsDrawerOpen} onOpenChange={setLessonsDrawerOpen}>
-                <DrawerTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-2.5 text-left text-sm text-foreground shadow-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                    aria-expanded={lessonsDrawerOpen}
-                    aria-haspopup="dialog"
-                  >
-                    <span className="min-w-0 truncate">
-                      {units[unitIndex]?.entry ?? currentTitle}
-                    </span>
-                    <ChevronDown
-                      className="size-4 shrink-0 text-muted-foreground opacity-70"
-                      aria-hidden
-                    />
-                  </button>
-                </DrawerTrigger>
-                <DrawerContent>
-                  <DrawerHeader className="gap-0 px-4 py-2 text-left">
-                    <DrawerTitle className="text-sm font-semibold leading-tight">
-                      Lessons
-                    </DrawerTitle>
-                  </DrawerHeader>
-                  <div className="max-h-[min(60dvh,28rem)] overflow-y-auto overscroll-contain px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-                    <ul className="space-y-1">
-                      {units.map((u) => (
-                        <li key={u.entry}>
-                          <button
-                            ref={
-                              u.index === unitIndex
-                                ? drawerSelectedLessonRef
-                                : undefined
-                            }
-                            type="button"
-                            onClick={() => {
-                              selectUnit(u.index);
-                              setLessonsDrawerOpen(false);
-                            }}
-                            className={
-                              u.index === unitIndex
-                                ? "w-full rounded-lg border border-primary bg-primary/15 px-3 py-2.5 text-left text-sm font-medium"
-                                : "w-full rounded-lg border border-transparent px-3 py-2.5 text-left text-sm opacity-90 hover:bg-muted"
-                            }
-                          >
-                            {u.entry}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </DrawerContent>
-              </Drawer>
-            )}
-          </div>
+              <p className="truncate text-xs text-sidebar-foreground/70">
+                {book?.bookLevel ? `${book.bookLevel} · ` : null}
+                {units.length} lessons
+              </p>
+            </div>
+          </button>
+        </SidebarHeader>
+        <SidebarContent>
+          <PlayLessonMenu
+            units={units}
+            unitIndex={unitIndex}
+            onSelectUnit={selectUnit}
+          />
+        </SidebarContent>
+        <SidebarRail />
+      </Sidebar>
 
-          <div className="hidden min-h-0 flex-1 flex-col md:flex md:overflow-hidden">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Lessons
-            </h2>
-            <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-border bg-card p-1">
-              {units.map((u) => (
-                <li key={u.entry}>
-                  <button
-                    type="button"
-                    onClick={() => selectUnit(u.index)}
-                    className={
-                      u.index === unitIndex
-                        ? "w-full rounded-lg border border-primary bg-primary/15 px-3 py-2.5 text-left text-sm font-medium"
-                        : "w-full rounded-lg border border-transparent px-3 py-2.5 text-left text-sm opacity-90 hover:bg-muted"
-                    }
-                  >
-                    {u.entry}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </aside>
-
-        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card p-0 md:h-full md:min-h-0 md:rounded-2xl">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:h-full md:p-6">
+      <SidebarInset className="max-w-none min-h-0 overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pt-[env(safe-area-inset-top)] md:pt-0">
+          <div className="nce-page-wrap flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden px-3 md:max-w-[1600px] md:px-6">
             <LyricsColumn
+              lessonTitle={currentTitle}
               lyricsStatus={lyricsStatus}
               lyricsError={lyricsError}
               lyricLines={lyricLines}
@@ -509,122 +442,67 @@ function PlayPage() {
               onLyricLineClick={handleLyricLineClick}
             />
           </div>
-        </div>
-        </div>
-      </main>
-
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 hidden md:block">
-        <div className="pointer-events-auto border-t border-border bg-background pb-[env(safe-area-inset-bottom)]">
-          <div className="nce-page-wrap max-w-[1600px] px-4 py-3">
-            <PlayerTransportControls {...transportProps} />
+          <div className="shrink-0 border-t border-border bg-background px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:px-6 md:pb-4">
+            <div className="nce-page-wrap mx-auto flex w-full max-w-[1600px] items-start gap-2">
+              <SidebarTrigger className="shrink-0 md:hidden" />
+              <div className="min-w-0 flex-1">
+                <PlayerTransportControls
+                  {...transportProps}
+                  dock={isMobile}
+                />
+              </div>
+            </div>
           </div>
         </div>
+      </SidebarInset>
       </div>
-
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 md:hidden">
-        <div className="pointer-events-auto border-t border-border bg-background pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-          <div className="max-h-[min(45dvh,14rem)] overflow-y-auto overscroll-contain px-2 py-1.5">
-            <PlayerTransportControls {...transportProps} dock />
-          </div>
-        </div>
-      </div>
-    </div>
+    </SidebarProvider>
   );
 }
 
-/** Portal + fixed position (below-left of trigger) so overflow-hidden does not clip. */
-function LyricsInteractionTips() {
-  const tipsId = useId();
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const [open, setOpen] = useState(false);
-  const [tipStyle, setTipStyle] = useState<CSSProperties>({});
+type PlayUnit = { index: number; entry: string };
 
-  const layout = useCallback(() => {
-    const el = btnRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const maxW = Math.min(19 * 16, vw - 16);
-    // Bottom-left of trigger: below the button, left edge aligned with the button.
-    let left = r.left;
-    left = Math.min(left, vw - maxW - 8);
-    left = Math.max(8, left);
-    setTipStyle({
-      position: "fixed",
-      left,
-      top: r.bottom + 8,
-      width: maxW,
-      zIndex: 10050,
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    layout();
-    const ro = new ResizeObserver(() => layout());
-    const t = btnRef.current;
-    if (t) ro.observe(t);
-    window.addEventListener("scroll", layout, true);
-    window.addEventListener("resize", layout);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("scroll", layout, true);
-      window.removeEventListener("resize", layout);
-    };
-  }, [open, layout]);
-
-  const tooltip = (
-    <div
-      id={tipsId}
-      role="tooltip"
-      style={tipStyle}
-      className="pointer-events-none rounded-lg border border-border bg-popover p-3 text-left text-xs leading-snug text-popover-foreground shadow-lg"
-    >
-      <p className="mb-2 font-semibold text-foreground">Tips</p>
-      <ul className="list-disc space-y-1.5 pl-4">
-        <li>
-          <span className="font-semibold text-foreground">Click</span> a
-          line to jump there and play. If audio is paused, playback starts.
-        </li>
-        <li>
-          <span className="font-semibold text-foreground">
-            Double-click
-          </span>{" "}
-          the same line quickly to pause automatically when that line ends.
-        </li>
-      </ul>
-    </div>
-  );
+function PlayLessonMenu({
+  units,
+  unitIndex,
+  onSelectUnit,
+}: {
+  units: readonly PlayUnit[];
+  unitIndex: number;
+  onSelectUnit: (idx: number) => void;
+}) {
+  const { isMobile, setOpenMobile } = useSidebar();
 
   return (
-    <div className="shrink-0 pt-0.5">
-      <button
-        ref={btnRef}
-        type="button"
-        className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        aria-label="Lyrics interaction tips"
-        aria-describedby={tipsId}
-        onMouseEnter={() => {
-          layout();
-          setOpen(true);
-        }}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => {
-          layout();
-          setOpen(true);
-        }}
-        onBlur={() => setOpen(false)}
-      >
-        <AlertCircle
-          className="size-4.5 shrink-0"
-          strokeWidth={2}
-          aria-hidden
-        />
-      </button>
-      {open && typeof document !== "undefined"
-        ? createPortal(tooltip, document.body)
-        : null}
-    </div>
+    <SidebarGroup>
+      <SidebarGroupLabel>Lessons</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {units.length === 0 ? (
+            <SidebarMenuItem>
+              <span className="block px-2 py-2 text-xs text-sidebar-foreground/70">
+                No lessons.
+              </span>
+            </SidebarMenuItem>
+          ) : (
+            units.map((u) => (
+              <SidebarMenuItem key={u.entry}>
+                <SidebarMenuButton
+                  isActive={u.index === unitIndex}
+                  tooltip={u.entry}
+                  onClick={() => {
+                    onSelectUnit(u.index);
+                    if (isMobile) setOpenMobile(false);
+                  }}
+                >
+                  <span className="truncate">{u.entry}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))
+          )}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
   );
 }
 
@@ -635,6 +513,7 @@ function lineHasChinese(line: LyricLine): boolean {
 }
 
 function LyricsColumn({
+  lessonTitle,
   lyricsStatus,
   lyricsError,
   lyricLines,
@@ -642,6 +521,7 @@ function LyricsColumn({
   translationMode,
   onLyricLineClick,
 }: {
+  lessonTitle: string;
   lyricsStatus: "idle" | "loading" | "error" | "ready";
   lyricsError: string | null;
   lyricLines: readonly LyricLine[];
@@ -651,16 +531,10 @@ function LyricsColumn({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-1 flex shrink-0 items-start justify-between gap-2 px-3 pt-3 md:mb-2 md:px-0 md:pt-0">
-        <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground md:gap-2">
-          <ListMusic className="size-4 shrink-0 opacity-80" aria-hidden />
-          Lyrics
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-0 md:px-0 md:pb-4 md:pr-2">
+        <h2 className="mx-auto max-w-2xl px-1 py-6 text-center text-lg font-semibold leading-snug tracking-tight text-pretty text-foreground md:py-9 md:text-xl">
+          {lessonTitle}
         </h2>
-        {lyricsStatus === "ready" && lyricLines.length > 0 ? (
-          <LyricsInteractionTips />
-        ) : null}
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-10 pt-0.5 md:px-0 md:pb-4 md:pt-0 md:pr-2">
         {lyricsStatus === "loading" && (
           <p className="text-sm opacity-70">Loading lyrics…</p>
         )}

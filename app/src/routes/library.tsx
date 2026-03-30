@@ -43,6 +43,7 @@ function LibraryPage() {
   }, [books]);
 
   return (
+    <div className="min-h-0 flex-1 overflow-y-auto">
     <main className="nce-page-wrap min-w-0 px-2 pb-28 pt-4 md:px-4 md:pb-10 md:pt-6">
       <Tabs defaultValue="all" className="w-full">
         <div className="mb-8 flex max-w-6xl flex-col gap-4 sm:mb-10 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
@@ -123,6 +124,7 @@ function LibraryPage() {
         </TabsContent>
       </Tabs>
     </main>
+    </div>
   );
 }
 

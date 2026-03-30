@@ -18,7 +18,7 @@ export default function Header() {
       <nav
         className={cn(
           "nce-page-wrap flex items-center py-3 sm:py-4",
-          /* Match play page lyrics card inner edge: main px-2 + card p-3 */
+          /* Match play page lyrics column: main px-2 + lyrics px-3 */
           isPlayPage && "max-md:pl-3",
         )}
         aria-label="Primary"
