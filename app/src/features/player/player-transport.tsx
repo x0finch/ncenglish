@@ -1,5 +1,6 @@
 import type { TrackPlayMode, TranslationMode } from "@nce/player";
 import {
+  Eye,
   EyeClosed,
   Gauge,
   Globe,
@@ -10,6 +11,7 @@ import {
   Repeat1,
   SkipBack,
   SkipForward,
+  SortDesc,
 } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { BookCoverArt } from "#/components/book-cover-art.tsx";
@@ -49,17 +51,26 @@ function TransportPlayCluster({
   onTogglePlay,
   onPrev,
   onNext,
+  trackPlayMode,
   className,
 }: {
   paused: boolean;
   onTogglePlay: () => void;
   onPrev: () => void;
   onNext: () => void;
+  trackPlayMode: TrackPlayMode;
   className?: string;
 }) {
   /** Apple Music–style: circular skips with light typography-like strokes; large filled play circle. */
   const skipIconCls = "size-[1.0625rem] sm:size-[1.1875rem]";
   const skipStroke = 1.35;
+  const reverse = trackPlayMode === "reverse";
+  const prevLessonLabel = reverse
+    ? "Later lesson in course"
+    : "Previous lesson";
+  const nextLessonLabel = reverse
+    ? "Earlier lesson in course"
+    : "Next lesson";
 
   return (
     <div
@@ -73,7 +84,7 @@ function TransportPlayCluster({
         variant="ghost"
         className="size-10 rounded-full text-muted-foreground transition-[color,transform,background-color] hover:bg-muted/85 hover:text-foreground active:scale-[0.96] sm:size-11"
         onClick={onPrev}
-        aria-label="Previous lesson"
+        aria-label={prevLessonLabel}
       >
         <SkipBack
           className={skipIconCls}
@@ -107,7 +118,7 @@ function TransportPlayCluster({
         variant="ghost"
         className="size-10 rounded-full text-muted-foreground transition-[color,transform,background-color] hover:bg-muted/85 hover:text-foreground active:scale-[0.96] sm:size-11"
         onClick={onNext}
-        aria-label="Next lesson"
+        aria-label={nextLessonLabel}
       >
         <SkipForward
           className={skipIconCls}
@@ -129,30 +140,79 @@ function translationModeUi(mode: TranslationMode): {
   switch (mode) {
     case "show":
       return {
-        title: "Bilingual focus: clear Chinese on current line only (next: English focus)",
+        title:
+          "Spotlight: sharp Chinese only on the line at the playhead; other lines stay soft (next: English-first)",
         ariaLabel:
-          "Lyrics show English plus Chinese on all lines; only the current line has sharp Chinese. Click to cycle display mode",
-        shortLabel: "Bilingual",
+          "Bilingual lyrics: English plus Chinese on every row, but Chinese is sharp only on the currently playing line. Click to cycle display mode",
+        shortLabel: "Spotlight",
         icon: <Globe className="size-3.5 shrink-0" aria-hidden />,
         buttonClass: "text-primary",
       };
     case "hide":
       return {
-        title: "English focus: all Chinese blurred until hover (next: full blur)",
+        title:
+          "English-first: all Chinese soft until you hover (next: full-line blur)",
         ariaLabel:
-          "Lyrics show English and Chinese; Chinese is blurred until hover. Click to cycle display mode",
+          "Bilingual lyrics: English stays sharp; Chinese is blurred until hover. Click to cycle display mode",
         shortLabel: "English",
         icon: <GlobeOff className="size-3.5 shrink-0" aria-hidden />,
         buttonClass: "text-muted-foreground hover:text-foreground",
       };
     case "blur":
       return {
-        title: "Full blur: English and Chinese until hover (next: bilingual focus)",
+        title:
+          "Full blur: both English and Chinese soft until hover (next: full readability)",
         ariaLabel:
-          "English and Chinese lyrics blurred until hover; click to cycle display mode",
+          "Both languages blurred until hover. Click to cycle display mode",
         shortLabel: "Blur",
         icon: <EyeClosed className="size-3.5 shrink-0" aria-hidden />,
         buttonClass: "text-muted-foreground hover:text-foreground",
+      };
+    case "clear":
+      return {
+        title:
+          "Full: sharp English and Chinese on every line—no softening (next: Spotlight)",
+        ariaLabel:
+          "Bilingual lyrics with both languages fully sharp on all rows, not only the current line. Click to cycle display mode",
+        shortLabel: "Full",
+        icon: <Eye className="size-3.5 shrink-0" aria-hidden />,
+        buttonClass: "text-primary",
+      };
+  }
+}
+
+function trackPlayModeButtonUi(mode: TrackPlayMode): {
+  title: string;
+  ariaLabel: string;
+  shortLabel: string;
+  icon: ReactNode;
+  accent: boolean;
+} {
+  switch (mode) {
+    case "sequential":
+      return {
+        title: "Sequential: play lessons in book order (next: reverse order)",
+        ariaLabel: "Sequential play, click to change mode",
+        shortLabel: "Sequential",
+        icon: <ListOrdered className="size-3.5 shrink-0" aria-hidden />,
+        accent: false,
+      };
+    case "reverse":
+      return {
+        title:
+          "Reverse order: after each lesson, play the previous lesson in the book (next: repeat one)",
+        ariaLabel: "Reverse course order, click to change mode",
+        shortLabel: "Reverse",
+        icon: <SortDesc className="size-3.5 shrink-0" aria-hidden />,
+        accent: false,
+      };
+    case "repeatOne":
+      return {
+        title: "Repeat one (next: sequential)",
+        ariaLabel: "Repeat one, click to change mode",
+        shortLabel: "Repeat",
+        icon: <Repeat1 className="size-3.5 shrink-0" aria-hidden />,
+        accent: true,
       };
   }
 }
@@ -160,7 +220,7 @@ function translationModeUi(mode: TranslationMode): {
 export function TransportExtraCluster({
   playbackRate,
   onCyclePlaybackRate,
-  isRepeatOne,
+  trackPlayMode,
   onCycleTrackPlayMode,
   onCycleTranslationMode,
   translationMode,
@@ -168,13 +228,14 @@ export function TransportExtraCluster({
 }: {
   playbackRate: number;
   onCyclePlaybackRate: () => void;
-  isRepeatOne: boolean;
+  trackPlayMode: TrackPlayMode;
   onCycleTrackPlayMode: () => void;
   onCycleTranslationMode: () => void;
   translationMode: TranslationMode;
   className?: string;
 }) {
   const tr = translationModeUi(translationMode);
+  const tm = trackPlayModeButtonUi(trackPlayMode);
   return (
     <div className={cn("flex items-center gap-2 sm:gap-3", className)}>
       <Button
@@ -197,24 +258,14 @@ export function TransportExtraCluster({
         size="sm"
         className={cn(
           "h-8 gap-1 px-2 text-muted-foreground hover:text-foreground",
-          isRepeatOne && "text-primary border-primary/50",
+          tm.accent && "text-primary border-primary/50",
         )}
         onClick={onCycleTrackPlayMode}
-        title={isRepeatOne ? "Repeat one" : "Sequential"}
-        aria-label={
-          isRepeatOne
-            ? "Repeat one, click to change mode"
-            : "Sequential play, click to change mode"
-        }
+        title={tm.title}
+        aria-label={tm.ariaLabel}
       >
-        {isRepeatOne ? (
-          <Repeat1 className="size-3.5 shrink-0" aria-hidden />
-        ) : (
-          <ListOrdered className="size-3.5 shrink-0" aria-hidden />
-        )}
-        <span className="text-[0.7rem] font-semibold">
-          {isRepeatOne ? "Repeat" : "Sequential"}
-        </span>
+        {tm.icon}
+        <span className="text-[0.7rem] font-semibold">{tm.shortLabel}</span>
       </Button>
       <Button
         type="button"
@@ -223,7 +274,8 @@ export function TransportExtraCluster({
         className={cn(
           "h-8 gap-1 px-2",
           tr.buttonClass,
-          translationMode === "show" && "border-primary/50",
+          (translationMode === "show" || translationMode === "clear") &&
+            "border-primary/50",
         )}
         onClick={onCycleTranslationMode}
         title={tr.title}
@@ -257,7 +309,6 @@ export function PlayerTransportControls({
   showExtraCluster = true,
   dock = false,
 }: PlayerTransportControlsProps) {
-  const isRepeatOne = trackPlayMode === "repeatOne";
   const dur = duration || 0;
   const t = Math.min(mediaTime, dur || 0);
   const seekPct = dur > 0 ? Math.min(100, Math.max(0, (t / dur) * 100)) : 0;
@@ -299,13 +350,14 @@ export function PlayerTransportControls({
               onTogglePlay={onTogglePlay}
               onPrev={onPrev}
               onNext={onNext}
+              trackPlayMode={trackPlayMode}
               className="justify-self-center"
             />
             {showExtraCluster ? (
               <TransportExtraCluster
                 playbackRate={playbackRate}
                 onCyclePlaybackRate={onCyclePlaybackRate}
-                isRepeatOne={isRepeatOne}
+                trackPlayMode={trackPlayMode}
                 onCycleTrackPlayMode={onCycleTrackPlayMode}
                 onCycleTranslationMode={onCycleTranslationMode}
                 translationMode={translationMode}
@@ -334,6 +386,7 @@ export function PlayerTransportControls({
               onTogglePlay={onTogglePlay}
               onPrev={onPrev}
               onNext={onNext}
+              trackPlayMode={trackPlayMode}
               className="sm:justify-self-center"
             />
 
@@ -341,7 +394,7 @@ export function PlayerTransportControls({
               <TransportExtraCluster
                 playbackRate={playbackRate}
                 onCyclePlaybackRate={onCyclePlaybackRate}
-                isRepeatOne={isRepeatOne}
+                trackPlayMode={trackPlayMode}
                 onCycleTrackPlayMode={onCycleTrackPlayMode}
                 onCycleTranslationMode={onCycleTranslationMode}
                 translationMode={translationMode}
@@ -359,13 +412,14 @@ export function PlayerTransportControls({
             onTogglePlay={onTogglePlay}
             onPrev={onPrev}
             onNext={onNext}
+            trackPlayMode={trackPlayMode}
             className="justify-center"
           />
           {showExtraCluster ? (
             <TransportExtraCluster
               playbackRate={playbackRate}
               onCyclePlaybackRate={onCyclePlaybackRate}
-              isRepeatOne={isRepeatOne}
+              trackPlayMode={trackPlayMode}
               onCycleTrackPlayMode={onCycleTrackPlayMode}
               onCycleTranslationMode={onCycleTranslationMode}
               translationMode={translationMode}

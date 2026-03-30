@@ -1,8 +1,8 @@
 import catalog from "@nce/catalog";
 import type { LyricLine } from "@nce/catalog";
-import type { TrackPlayMode } from "@nce/player";
+import type { TrackPlayMode, TranslationMode } from "@nce/player";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ListMusic } from "lucide-react";
+import { ListMusic, MousePointerClick, Timer } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -28,12 +28,16 @@ import {
 } from "#/components/ui/sidebar.tsx";
 import { useIsMobile } from "#/hooks/use-mobile.ts";
 import { formatMediaTime } from "#/lib/format-media-time.ts";
+import { Button } from "#/components/ui/button.tsx";
 import { cn } from "#/lib/utils.ts";
 import {
   PlayerTransportControls,
   TransportExtraCluster,
 } from "../../features/player/player-transport.tsx";
-import { useNceStore } from "../../features/player/nce-store.ts";
+import {
+  useNceStore,
+  type LyricClickMode,
+} from "../../features/player/nce-store.ts";
 import { logMediaInfo, logMediaWarn } from "../../lib/client-media-log.ts";
 
 export const Route = createFileRoute("/play/$bookKey")({
@@ -46,9 +50,6 @@ export const Route = createFileRoute("/play/$bookKey")({
   },
   component: PlayPage,
 });
-
-/** Second click on the same lyric line within this window arms pause-at-end-of-line. */
-const LYRIC_DOUBLE_CLICK_MS = 450;
 
 /** Strip only real audio extensions; lesson names like `001&002.Excuse Me` must stay intact. */
 const AUDIO_FILE_EXT = /\.(aac|flac|m4a|mp3|ogg|opus|wav|wma)$/i;
@@ -87,44 +88,10 @@ function PlayPage() {
   const cyclePlaybackRate = useNceStore((s) => s.cyclePlaybackRate);
   const cycleTrackPlayMode = useNceStore((s) => s.cycleTrackPlayMode);
   const cycleTranslationMode = useNceStore((s) => s.cycleTranslationMode);
+  const lyricClickMode = useNceStore((s) => s.lyricClickMode);
+  const cycleLyricClickMode = useNceStore((s) => s.cycleLyricClickMode);
   const armPauseAfterLine = useNceStore((s) => s.armPauseAfterLine);
   const clearPauseAfterLine = useNceStore((s) => s.clearPauseAfterLine);
-
-  const lyricDoubleClickRef = useRef<{ lineIndex: number; t: number } | null>(
-    null,
-  );
-
-  /** Suppress immediate scroll-into-view after lyric taps so a second tap hits the same row. */
-  const lyricScrollGateRef = useRef<{
-    suppressUntil: number;
-    deferredId: ReturnType<typeof setTimeout> | null;
-  }>({ suppressUntil: 0, deferredId: null });
-
-  const bumpLyricClickScrollGate = useCallback(() => {
-    const g = lyricScrollGateRef.current;
-    if (g.deferredId != null) {
-      clearTimeout(g.deferredId);
-      g.deferredId = null;
-    }
-    g.suppressUntil = Date.now() + LYRIC_DOUBLE_CLICK_MS;
-    g.deferredId = setTimeout(() => {
-      g.deferredId = null;
-      g.suppressUntil = 0;
-      const a = audioRef.current;
-      const lines = useNceStore.getState().lyricLines;
-      const t = a?.currentTime ?? 0;
-      const idx = catalog.activeLyricIndex(lines, t);
-      const row = document.getElementById(`lyric-line-${idx}`);
-      row?.scrollIntoView({ block: "center", behavior: "smooth" });
-    }, LYRIC_DOUBLE_CLICK_MS);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      const g = lyricScrollGateRef.current;
-      if (g.deferredId != null) clearTimeout(g.deferredId);
-    };
-  }, []);
 
   useEffect(() => {
     useNceStore.getState().setBook(bookKey, unitFromUrl);
@@ -224,9 +191,6 @@ function PlayPage() {
   const activeLyric = catalog.activeLyricIndex(lyricLines, mediaTime);
 
   useEffect(() => {
-    if (Date.now() < lyricScrollGateRef.current.suppressUntil) {
-      return;
-    }
     const el = document.getElementById(`lyric-line-${activeLyric}`);
     el?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [activeLyric]);
@@ -275,40 +239,27 @@ function PlayPage() {
 
   const handleLyricLineClick = useCallback(
     (lineIndex: number, timeSec: number) => {
-      bumpLyricClickScrollGate();
-
-      const now = Date.now();
-      const prev = lyricDoubleClickRef.current;
-      const isDouble =
-        prev != null &&
-        prev.lineIndex === lineIndex &&
-        now - prev.t < LYRIC_DOUBLE_CLICK_MS;
-
-      if (isDouble) {
-        lyricDoubleClickRef.current = null;
+      const mode = useNceStore.getState().lyricClickMode;
+      if (mode === "jumpOnly") {
+        clearPauseAfterLine();
+        const el = audioRef.current;
         seekAudio(timeSec);
-        armPauseAfterLine(lineIndex);
-        const a = audioRef.current;
-        if (a?.paused) {
+        // Seek-only: no pause-at-line-end; always start or resume playback after seek.
+        if (el) {
           useNceStore.getState().setSuppressAutoplay(false);
-          void a.play();
+          void el.play();
         }
         return;
       }
-
-      lyricDoubleClickRef.current = { lineIndex, t: now };
-      const armed = useNceStore.getState().pauseAfterLineIndex;
-      if (armed != null && armed !== lineIndex) {
-        clearPauseAfterLine();
-      }
       seekAudio(timeSec);
+      armPauseAfterLine(lineIndex);
       const a = audioRef.current;
       if (a?.paused) {
         useNceStore.getState().setSuppressAutoplay(false);
         void a.play();
       }
     },
-    [armPauseAfterLine, bumpLyricClickScrollGate, clearPauseAfterLine, seekAudio],
+    [armPauseAfterLine, clearPauseAfterLine, seekAudio],
   );
 
   const onAudioTimeUpdate = useCallback((e: SyntheticEvent<HTMLAudioElement>) => {
@@ -373,8 +324,8 @@ function PlayPage() {
     onSeek: onSeekFromScrubber,
     paused,
     onTogglePlay: togglePlay,
-    onPrev: goPrev,
-    onNext: goNext,
+    onPrev: trackPlayMode === "reverse" ? goNext : goPrev,
+    onNext: trackPlayMode === "reverse" ? goPrev : goNext,
     playbackRate,
     onCyclePlaybackRate: cyclePlaybackRate,
     trackPlayMode,
@@ -448,6 +399,8 @@ function PlayPage() {
               trackPlayMode={trackPlayMode}
               onCycleTrackPlayMode={cycleTrackPlayMode}
               onCycleTranslationMode={cycleTranslationMode}
+              lyricClickMode={lyricClickMode}
+              onCycleLyricClickMode={cycleLyricClickMode}
               onLyricLineClick={handleLyricLineClick}
             />
           </div>
@@ -519,6 +472,44 @@ function PlayLessonMenu({
 
 const lyricBlurClass = "blur-sm transition hover:blur-none";
 
+function LyricClickModeToggle({
+  mode,
+  onCycle,
+}: {
+  mode: LyricClickMode;
+  onCycle: () => void;
+}) {
+  const seekOnly = mode === "jumpOnly";
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-8 max-w-full gap-1.5 px-2.5 text-muted-foreground hover:text-foreground"
+      onClick={onCycle}
+      title={
+        seekOnly
+          ? "Single tap: jump and play; does not pause at line end. Click to switch to play line then pause at line end."
+          : "Single tap: jump, play, and pause when this line ends. Click to switch to seek only."
+      }
+      aria-label={
+        seekOnly
+          ? "Lyric tap mode: seek and play without pausing at line end. Click to switch to line-then-pause mode."
+          : "Lyric tap mode: play this line then pause at line end. Click to switch to seek only."
+      }
+    >
+      {seekOnly ? (
+        <MousePointerClick className="size-3.5 shrink-0" aria-hidden />
+      ) : (
+        <Timer className="size-3.5 shrink-0" aria-hidden />
+      )}
+      <span className="text-[0.7rem] font-semibold">
+        {seekOnly ? "Seek only" : "Line, then pause"}
+      </span>
+    </Button>
+  );
+}
+
 function lineHasChinese(line: LyricLine): boolean {
   return line.chinese.trim().length > 0;
 }
@@ -535,6 +526,8 @@ function LyricsColumn({
   trackPlayMode,
   onCycleTrackPlayMode,
   onCycleTranslationMode,
+  lyricClickMode,
+  onCycleLyricClickMode,
   onLyricLineClick,
 }: {
   lessonTitle: string;
@@ -542,15 +535,20 @@ function LyricsColumn({
   lyricsError: string | null;
   lyricLines: readonly LyricLine[];
   activeLyric: number;
-  translationMode: "show" | "hide" | "blur";
+  translationMode: TranslationMode;
   playbackRate: number;
   onCyclePlaybackRate: () => void;
   trackPlayMode: TrackPlayMode;
   onCycleTrackPlayMode: () => void;
   onCycleTranslationMode: () => void;
+  lyricClickMode: LyricClickMode;
+  onCycleLyricClickMode: () => void;
   onLyricLineClick: (lineIndex: number, timeSec: number) => void;
 }) {
-  const isRepeatOne = trackPlayMode === "repeatOne";
+  const lineTapHint =
+    lyricClickMode === "jumpOnly"
+      ? "Seek and play; does not pause after this line ends."
+      : "Plays from this line and pauses when the line ends.";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -558,19 +556,23 @@ function LyricsColumn({
         <h2 className="mx-auto max-w-2xl px-1 py-6 text-center text-lg font-semibold leading-snug tracking-tight text-pretty text-foreground md:py-6 md:text-xl">
           {lessonTitle}
         </h2>
-        <div className="flex justify-center">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
           <TransportExtraCluster
             playbackRate={playbackRate}
             onCyclePlaybackRate={onCyclePlaybackRate}
-            isRepeatOne={isRepeatOne}
+            trackPlayMode={trackPlayMode}
             onCycleTrackPlayMode={onCycleTrackPlayMode}
             onCycleTranslationMode={onCycleTranslationMode}
             translationMode={translationMode}
             className="justify-center"
           />
+          <LyricClickModeToggle
+            mode={lyricClickMode}
+            onCycle={onCycleLyricClickMode}
+          />
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-0 md:px-0 md:pb-4 md:pr-2">
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-0 md:px-0 md:pb-4 md:pr-2">
         {lyricsStatus === "loading" && (
           <p className="text-sm opacity-70">Loading lyrics…</p>
         )}
@@ -584,9 +586,10 @@ function LyricsColumn({
           {lyricLines.map((line, i) => {
             const hasCn = lineHasChinese(line);
             const isActive = activeLyric >= 0 && i === activeLyric;
-            /** show: only active line has clear Chinese; hide: all Chinese blurred; blur: whole-line wrapper only */
+            /** show: only active line has clear Chinese; hide: all Chinese blurred; blur: whole-line wrapper; clear: no blur */
             const blurChineseOnly =
               translationMode !== "blur" &&
+              translationMode !== "clear" &&
               hasCn &&
               (translationMode === "hide" ||
                 (translationMode === "show" && !isActive));
@@ -622,8 +625,8 @@ function LyricsColumn({
                       ? "border-transparent bg-primary/15 font-semibold text-primary shadow-sm"
                       : "border-transparent bg-transparent opacity-80 hover:bg-accent",
                   )}
-                  aria-label={`Seek to ${formatMediaTime(line.timeSec)}: ${line.english.slice(0, 120)}. Double-click the same line to pause when it ends.`}
-                  title="Double-click this line (twice quickly) to pause when this line ends."
+                  aria-label={`Seek to ${formatMediaTime(line.timeSec)}: ${line.english.slice(0, 120)}. ${lineTapHint}`}
+                  title={lineTapHint}
                 >
                   <span className="text-xs opacity-50 tabular-nums">
                     {formatMediaTime(line.timeSec)}

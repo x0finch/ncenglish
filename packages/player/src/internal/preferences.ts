@@ -1,7 +1,7 @@
 import type { TrackPlayMode } from "./track-play-mode.ts";
 import { PLAYBACK_SPEEDS, normalizePlaybackRate, type PlaybackRate } from "./playback-rate.ts";
 
-export type TranslationMode = "show" | "hide" | "blur";
+export type TranslationMode = "show" | "hide" | "blur" | "clear";
 
 export type PlayerPreferences = {
   trackPlayMode: TrackPlayMode;
@@ -16,11 +16,11 @@ export const DEFAULT_PLAYER_PREFERENCES: PlayerPreferences = {
 };
 
 function isTrackPlayMode(v: unknown): v is TrackPlayMode {
-  return v === "sequential" || v === "repeatOne";
+  return v === "sequential" || v === "reverse" || v === "repeatOne";
 }
 
 function isTranslationMode(v: unknown): v is TranslationMode {
-  return v === "show" || v === "hide" || v === "blur";
+  return v === "show" || v === "hide" || v === "blur" || v === "clear";
 }
 
 function isPlaybackRate(v: unknown): v is PlaybackRate {

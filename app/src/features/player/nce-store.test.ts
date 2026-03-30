@@ -44,6 +44,7 @@ describe("useNceStore onAudioEnded", () => {
       trackPlayMode: "sequential",
       playbackRate: 1,
       translationMode: "show",
+      lyricClickMode: "jumpOnly",
       suppressAutoplay: false,
       pauseAfterLineIndex: null,
       lyricLines: [],
@@ -64,5 +65,21 @@ describe("useNceStore onAudioEnded", () => {
     const res = useNceStore.getState().onAudioEnded();
     expect(res.action).toBe("stop");
     expect(useNceStore.getState().unitIndex).toBe(1);
+  });
+
+  it("reverse mode goes to previous unit", () => {
+    useNceStore.getState().setBook("B1", 1);
+    useNceStore.setState({ trackPlayMode: "reverse" });
+    const res = useNceStore.getState().onAudioEnded();
+    expect(res.action).toBe("prev");
+    expect(useNceStore.getState().unitIndex).toBe(0);
+  });
+
+  it("reverse mode at first unit stops", () => {
+    useNceStore.getState().setBook("B1", 0);
+    useNceStore.setState({ trackPlayMode: "reverse" });
+    const res = useNceStore.getState().onAudioEnded();
+    expect(res.action).toBe("stop");
+    expect(useNceStore.getState().unitIndex).toBe(0);
   });
 });

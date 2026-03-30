@@ -61,4 +61,24 @@ describe("track-play-mode", () => {
       }),
     ).toEqual({ action: "stop" });
   });
+
+  it("TP-5: reverse mode advances to previous unit index", () => {
+    expect(
+      resolveAfterTrackEnded({
+        mode: "reverse",
+        unitIndex: 1,
+        unitCount: 3,
+      }),
+    ).toEqual({ action: "prev" });
+  });
+
+  it("TP-6: reverse mode at first unit stops", () => {
+    expect(
+      resolveAfterTrackEnded({
+        mode: "reverse",
+        unitIndex: 0,
+        unitCount: 3,
+      }),
+    ).toEqual({ action: "stop" });
+  });
 });

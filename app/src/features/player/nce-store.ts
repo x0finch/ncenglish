@@ -1,6 +1,7 @@
 import catalog, { type LyricLine } from "@nce/catalog";
 import player, {
   type PlayerPreferences,
+  type TrackEndedResolution,
   type TrackPlayMode,
   type TranslationMode,
 } from "@nce/player";
@@ -8,12 +9,17 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { logMediaInfo, logMediaWarn } from "../../lib/client-media-log.ts";
 
+/** How a single tap on a lyric line behaves. */
+export type LyricClickMode = "jumpOnly" | "jumpPlayPauseLine";
+
 export type NceSessionState = {
   bookKey: string | null;
   unitIndex: number;
   trackPlayMode: TrackPlayMode;
   playbackRate: number;
   translationMode: TranslationMode;
+  /** Single tap: seek and play; either no pause at line end, or pause when the current line ends. */
+  lyricClickMode: LyricClickMode;
   /**
    * When true, new audio sources (next lesson, refresh) do not auto-play until the user
    * presses play or seeks from lyrics. Set on explicit pause; cleared on explicit play.
@@ -29,10 +35,11 @@ export type NceSessionState = {
   goNext: () => void;
   goPrev: () => void;
   /** Call when <audio> fires `ended`; returns how the UI should react. */
-  onAudioEnded: () => { action: "replay" | "next" | "stop" };
+  onAudioEnded: () => TrackEndedResolution;
   cyclePlaybackRate: () => void;
   cycleTrackPlayMode: () => void;
   cycleTranslationMode: () => void;
+  cycleLyricClickMode: () => void;
   loadLyricsForCurrentUnit: () => Promise<void>;
   setLyricLines: (lines: LyricLine[]) => void;
   applyPlayerPreferences: (p: PlayerPreferences) => void;
@@ -54,6 +61,7 @@ export const useNceStore = create<NceSessionState>()(
       trackPlayMode: player.DEFAULT_PLAYER_PREFERENCES.trackPlayMode,
       playbackRate: player.DEFAULT_PLAYER_PREFERENCES.playbackRate,
       translationMode: player.DEFAULT_PLAYER_PREFERENCES.translationMode,
+      lyricClickMode: "jumpOnly" as LyricClickMode,
       suppressAutoplay: false,
       pauseAfterLineIndex: null,
       lyricLines: [],
@@ -136,6 +144,8 @@ export const useNceStore = create<NceSessionState>()(
         });
         if (res.action === "next") {
           get().goNext();
+        } else if (res.action === "prev") {
+          get().goPrev();
         }
         return res;
       },
@@ -147,15 +157,32 @@ export const useNceStore = create<NceSessionState>()(
       },
 
       cycleTrackPlayMode: () => {
-        set((s) => ({
-          trackPlayMode:
-            s.trackPlayMode === "sequential" ? "repeatOne" : "sequential",
-        }));
+        set((s) => {
+          const order: readonly TrackPlayMode[] = [
+            "sequential",
+            "reverse",
+            "repeatOne",
+          ];
+          const i = order.indexOf(s.trackPlayMode);
+          const idx = i >= 0 ? i : 0;
+          const next = order[(idx + 1) % order.length] ?? "sequential";
+          return { trackPlayMode: next };
+        });
       },
 
       cycleTranslationMode: () => {
         set((s) => ({
           translationMode: player.cycleTranslationMode(s.translationMode),
+        }));
+      },
+
+      cycleLyricClickMode: () => {
+        set((s) => ({
+          lyricClickMode:
+            s.lyricClickMode === "jumpOnly"
+              ? "jumpPlayPauseLine"
+              : "jumpOnly",
+          pauseAfterLineIndex: null,
         }));
       },
 
@@ -248,8 +275,18 @@ export const useNceStore = create<NceSessionState>()(
         trackPlayMode: s.trackPlayMode,
         playbackRate: s.playbackRate,
         translationMode: s.translationMode,
+        lyricClickMode: s.lyricClickMode,
         suppressAutoplay: s.suppressAutoplay,
       }),
+      merge: (persisted, current) => {
+        const p = persisted as Partial<NceSessionState> | null | undefined;
+        if (!p || typeof p !== "object") return current;
+        return {
+          ...current,
+          ...p,
+          lyricClickMode: p.lyricClickMode ?? current.lyricClickMode,
+        };
+      },
     },
   ),
 );

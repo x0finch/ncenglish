@@ -1,6 +1,6 @@
 import type { TranslationMode } from "./preferences.ts";
 
-const ORDER: readonly TranslationMode[] = ["show", "hide", "blur"];
+const ORDER: readonly TranslationMode[] = ["show", "hide", "blur", "clear"];
 
 export function cycleTranslationMode(current: TranslationMode): TranslationMode {
   const i = ORDER.indexOf(current);

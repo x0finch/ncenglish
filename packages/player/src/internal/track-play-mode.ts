@@ -1,6 +1,6 @@
-export type TrackPlayMode = "sequential" | "repeatOne";
+export type TrackPlayMode = "sequential" | "reverse" | "repeatOne";
 
-export type TrackEndedAction = "next" | "replay" | "stop";
+export type TrackEndedAction = "next" | "prev" | "replay" | "stop";
 
 export type TrackEndedResolution = { action: TrackEndedAction };
 
@@ -15,6 +15,12 @@ export function resolveAfterTrackEnded(input: {
   }
   if (mode === "repeatOne") {
     return { action: "replay" };
+  }
+  if (mode === "reverse") {
+    if (unitIndex > 0) {
+      return { action: "prev" };
+    }
+    return { action: "stop" };
   }
   if (unitIndex < unitCount - 1) {
     return { action: "next" };
