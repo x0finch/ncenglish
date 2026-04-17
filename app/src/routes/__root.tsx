@@ -3,6 +3,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import Header from "../components/Header.tsx";
 import { TooltipProvider } from "../components/ui/tooltip.tsx";
+import { Toaster } from "../components/ui/sonner.tsx";
 import { initClientCatalog } from "../lib/catalog-client.ts";
 import { syncTanstackDevtoolsTriggerToTopRight } from "../lib/tanstack-devtools-layout.ts";
 
@@ -32,6 +33,7 @@ function RootLayout() {
             },
           ]}
         />
+        <Toaster />
       </div>
     </TooltipProvider>
   );

@@ -1,15 +1,9 @@
-import catalog from "@nce/catalog";
-import type { LyricLine } from "@nce/catalog";
-import type { TrackPlayMode, TranslationMode } from "@nce/player";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ListMusic, MousePointerClick, Timer } from "lucide-react";
+import { Button } from "#/components/ui/button.tsx";
 import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type SyntheticEvent,
-} from "react";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "#/components/ui/tooltip.tsx";
 import {
   Sidebar,
   SidebarContent,
@@ -28,16 +22,28 @@ import {
 } from "#/components/ui/sidebar.tsx";
 import { useIsMobile } from "#/hooks/use-mobile.ts";
 import { formatMediaTime } from "#/lib/format-media-time.ts";
-import { Button } from "#/components/ui/button.tsx";
 import { cn } from "#/lib/utils.ts";
+import type { LyricLine } from "@nce/catalog";
+import catalog from "@nce/catalog";
+import type { TrackPlayMode, TranslationMode } from "@nce/player";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ListMusic, MousePointerClick, Timer } from "lucide-react";
+import { toast } from "sonner";
 import {
-  PlayerTransportControls,
-  TransportExtraCluster,
-} from "../../features/player/player-transport.tsx";
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type SyntheticEvent,
+} from "react";
 import {
   useNceStore,
   type LyricClickMode,
 } from "../../features/player/nce-store.ts";
+import {
+  PlayerTransportControls,
+  TransportExtraCluster,
+} from "../../features/player/player-transport.tsx";
 import { logMediaInfo, logMediaWarn } from "../../lib/client-media-log.ts";
 
 export const Route = createFileRoute("/play/$bookKey")({
@@ -262,50 +268,56 @@ function PlayPage() {
     [armPauseAfterLine, clearPauseAfterLine, seekAudio],
   );
 
-  const onAudioTimeUpdate = useCallback((e: SyntheticEvent<HTMLAudioElement>) => {
-    const el = e.currentTarget;
-    const t = el.currentTime;
-    setMediaTime(t);
+  const onAudioTimeUpdate = useCallback(
+    (e: SyntheticEvent<HTMLAudioElement>) => {
+      const el = e.currentTarget;
+      const t = el.currentTime;
+      setMediaTime(t);
 
-    const st = useNceStore.getState();
-    const idx = st.pauseAfterLineIndex;
-    if (idx == null) return;
-    const lines = st.lyricLines;
-    if (idx < 0 || idx >= lines.length) {
-      st.clearPauseAfterLine();
-      return;
-    }
-    const dur = el.duration;
-    const lineStart = lines[idx].timeSec;
-    const nextStart = lines[idx + 1]?.timeSec;
-    const boundary =
-      nextStart !== undefined && Number.isFinite(nextStart)
-        ? nextStart
-        : Number.isFinite(dur)
-          ? dur
-          : null;
-    if (boundary == null) return;
-    if (t >= boundary - 0.05) {
-      // Snap just before the next line so activeLyric stays on this line after pause.
-      let snap: number;
-      if (nextStart !== undefined && Number.isFinite(nextStart)) {
-        const beforeNext = nextStart - 0.08;
-        if (beforeNext > lineStart) {
-          snap = Math.min(beforeNext, el.duration);
-        } else {
-          snap = Math.min(lineStart + (nextStart - lineStart) * 0.5, el.duration);
-        }
-      } else if (Number.isFinite(dur)) {
-        snap = Math.max(lineStart, Math.min(dur - 0.06, el.duration));
-      } else {
-        snap = t;
+      const st = useNceStore.getState();
+      const idx = st.pauseAfterLineIndex;
+      if (idx == null) return;
+      const lines = st.lyricLines;
+      if (idx < 0 || idx >= lines.length) {
+        st.clearPauseAfterLine();
+        return;
       }
-      el.currentTime = snap;
-      setMediaTime(snap);
-      el.pause();
-      st.clearPauseAfterLine();
-    }
-  }, []);
+      const dur = el.duration;
+      const lineStart = lines[idx].timeSec;
+      const nextStart = lines[idx + 1]?.timeSec;
+      const boundary =
+        nextStart !== undefined && Number.isFinite(nextStart)
+          ? nextStart
+          : Number.isFinite(dur)
+            ? dur
+            : null;
+      if (boundary == null) return;
+      if (t >= boundary - 0.05) {
+        // Snap just before the next line so activeLyric stays on this line after pause.
+        let snap: number;
+        if (nextStart !== undefined && Number.isFinite(nextStart)) {
+          const beforeNext = nextStart - 0.08;
+          if (beforeNext > lineStart) {
+            snap = Math.min(beforeNext, el.duration);
+          } else {
+            snap = Math.min(
+              lineStart + (nextStart - lineStart) * 0.5,
+              el.duration,
+            );
+          }
+        } else if (Number.isFinite(dur)) {
+          snap = Math.max(lineStart, Math.min(dur - 0.06, el.duration));
+        } else {
+          snap = t;
+        }
+        el.currentTime = snap;
+        setMediaTime(snap);
+        el.pause();
+        st.clearPauseAfterLine();
+      }
+    },
+    [],
+  );
 
   const book = catalog.getBook(bookKey);
   const units = book ? catalog.listUnits(bookKey) : [];
@@ -352,70 +364,70 @@ function PlayPage() {
 
       {/* Sidebar + inset must be siblings in a row so inset peer styles and widths work (Shadcn dashboard). */}
       <div className="flex min-h-0 min-w-0 w-full flex-1 flex-row overflow-hidden">
-      <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader className="border-b border-sidebar-border">
-          <button
-            type="button"
-            onClick={() => void navigate({ to: "/library" })}
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left ring-sidebar-ring outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2"
-            aria-label="Back to library"
-          >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-              <ListMusic className="size-4" aria-hidden />
-            </div>
-            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-sm font-semibold text-sidebar-foreground">
-                {book?.title ?? "—"}
-              </p>
-              <p className="truncate text-xs text-sidebar-foreground/70">
-                {book?.bookLevel ? `${book.bookLevel} · ` : null}
-                {units.length} lessons
-              </p>
-            </div>
-          </button>
-        </SidebarHeader>
-        <SidebarContent>
-          <PlayLessonMenu
-            units={units}
-            unitIndex={unitIndex}
-            onSelectUnit={selectUnit}
-          />
-        </SidebarContent>
-        <SidebarRail />
-      </Sidebar>
-
-      <SidebarInset className="max-w-none min-h-0 overflow-hidden">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pt-[env(safe-area-inset-top)] md:pt-0">
-          <div className="nce-page-wrap flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden px-3 md:max-w-[1600px] md:px-6">
-            <LyricsColumn
-              lessonTitle={currentTitle}
-              lyricsStatus={lyricsStatus}
-              lyricsError={lyricsError}
-              lyricLines={lyricLines}
-              activeLyric={activeLyric}
-              translationMode={translationMode}
-              playbackRate={playbackRate}
-              onCyclePlaybackRate={cyclePlaybackRate}
-              trackPlayMode={trackPlayMode}
-              onCycleTrackPlayMode={cycleTrackPlayMode}
-              onCycleTranslationMode={cycleTranslationMode}
-              lyricClickMode={lyricClickMode}
-              onCycleLyricClickMode={cycleLyricClickMode}
-              onLyricLineClick={handleLyricLineClick}
+        <Sidebar collapsible="icon" variant="inset">
+          <SidebarHeader className="border-b border-sidebar-border">
+            <button
+              type="button"
+              onClick={() => void navigate({ to: "/library" })}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left ring-sidebar-ring outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2"
+              aria-label="Back to library"
+            >
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <ListMusic className="size-4" aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                <p className="truncate text-sm font-semibold text-sidebar-foreground">
+                  {book?.title ?? "—"}
+                </p>
+                <p className="truncate text-xs text-sidebar-foreground/70">
+                  {book?.bookLevel ? `${book.bookLevel} · ` : null}
+                  {units.length} lessons
+                </p>
+              </div>
+            </button>
+          </SidebarHeader>
+          <SidebarContent>
+            <PlayLessonMenu
+              units={units}
+              unitIndex={unitIndex}
+              onSelectUnit={selectUnit}
             />
-          </div>
-          <div className="shrink-0 border-t border-border bg-background px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:px-6 md:pb-4">
-            <div className="nce-page-wrap mx-auto w-full max-w-[1600px]">
-              <PlayerTransportControls
-                {...transportProps}
-                dock={isMobile}
-                showTrackInfo={false}
-                showExtraCluster={false}
+          </SidebarContent>
+          <SidebarRail />
+        </Sidebar>
+
+        <SidebarInset className="max-w-none min-h-0 overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pt-[env(safe-area-inset-top)] md:pt-0">
+            <div className="nce-page-wrap flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden px-3 md:max-w-[1600px] md:px-6">
+              <LyricsColumn
+                lessonTitle={currentTitle}
+                lyricsStatus={lyricsStatus}
+                lyricsError={lyricsError}
+                lyricLines={lyricLines}
+                activeLyric={activeLyric}
+                translationMode={translationMode}
+                playbackRate={playbackRate}
+                onCyclePlaybackRate={cyclePlaybackRate}
+                trackPlayMode={trackPlayMode}
+                onCycleTrackPlayMode={cycleTrackPlayMode}
+                onCycleTranslationMode={cycleTranslationMode}
+                lyricClickMode={lyricClickMode}
+                onCycleLyricClickMode={cycleLyricClickMode}
+                onLyricLineClick={handleLyricLineClick}
               />
             </div>
+            <div className="shrink-0 border-t border-border bg-background px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:px-6 md:pb-4">
+              <div className="nce-page-wrap mx-auto w-full max-w-[1600px]">
+                <PlayerTransportControls
+                  {...transportProps}
+                  dock={isMobile}
+                  showTrackInfo={false}
+                  showExtraCluster={false}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      </SidebarInset>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );
@@ -469,41 +481,91 @@ function PlayLessonMenu({
 
 const lyricBlurClass = "blur-sm transition hover:blur-none";
 
+const TOAST_HINT_MS = 4500;
+
+const lyricTapHintLineThenPause =
+  "Now: single tap on a line — jump, play, and pause when that line ends. Tap this button again for seek-only.";
+const lyricTapHintSeekOnly =
+  "Now: single tap on a line — jump and keep playing; does not pause at line end. Tap this button again for line-then-pause.";
+
 function LyricClickModeToggle({
   mode,
   onCycle,
+  compact = false,
 }: {
   mode: LyricClickMode;
   onCycle: () => void;
+  compact?: boolean;
 }) {
+  const isMobile = useIsMobile();
   const seekOnly = mode === "jumpOnly";
+  const fullLabel = seekOnly ? "Seek only" : "Line, then pause";
+  const narrowLabel = seekOnly ? "Seek" : "Line+";
+  const tx = compact ? "text-[0.625rem]" : "text-[0.7rem]";
+  const hintTitle = seekOnly
+    ? "Single tap: jump and play; does not pause at line end. Click to switch to play line then pause at line end."
+    : "Single tap: jump, play, and pause when this line ends. Click to switch to seek only.";
+
+  const aria =
+    seekOnly
+      ? "Lyric tap mode: seek and play without pausing at line end. Click to switch to line-then-pause mode."
+      : "Lyric tap mode: play this line then pause at line end. Click to switch to seek only.";
+
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className="h-8 max-w-full gap-1.5 px-2.5 text-muted-foreground hover:text-foreground"
-      onClick={onCycle}
-      title={
-        seekOnly
-          ? "Single tap: jump and play; does not pause at line end. Click to switch to play line then pause at line end."
-          : "Single tap: jump, play, and pause when this line ends. Click to switch to seek only."
-      }
-      aria-label={
-        seekOnly
-          ? "Lyric tap mode: seek and play without pausing at line end. Click to switch to line-then-pause mode."
-          : "Lyric tap mode: play this line then pause at line end. Click to switch to seek only."
-      }
-    >
-      {seekOnly ? (
-        <MousePointerClick className="size-3.5 shrink-0" aria-hidden />
-      ) : (
-        <Timer className="size-3.5 shrink-0" aria-hidden />
-      )}
-      <span className="text-[0.7rem] font-semibold">
-        {seekOnly ? "Seek only" : "Line, then pause"}
-      </span>
-    </Button>
+    <Tooltip disabled={isMobile}>
+      <TooltipTrigger
+        delay={400}
+        closeOnClick={false}
+        render={(triggerProps) => (
+          <Button
+            {...triggerProps}
+            type="button"
+            variant="outline"
+            size="sm"
+            className={cn(
+              triggerProps.className,
+              "shrink-0 text-muted-foreground hover:text-foreground",
+              compact
+                ? "h-7 gap-0.5 px-1.5 [&_svg]:size-3"
+                : "h-8 max-w-full gap-1.5 px-2.5",
+            )}
+            title={hintTitle}
+            aria-label={aria}
+            onClick={(e) => {
+              triggerProps.onClick?.(e);
+              onCycle();
+              if (isMobile) {
+                toast.message(
+                  seekOnly
+                    ? lyricTapHintLineThenPause
+                    : lyricTapHintSeekOnly,
+                  { duration: TOAST_HINT_MS },
+                );
+              }
+            }}
+          >
+            {seekOnly ? (
+              <MousePointerClick className="size-3.5 shrink-0" aria-hidden />
+            ) : (
+              <Timer className="size-3.5 shrink-0" aria-hidden />
+            )}
+            {compact ? (
+              <>
+                <span className={cn(tx, "font-semibold", "hidden md:inline")}>
+                  {fullLabel}
+                </span>
+                <span className={cn(tx, "font-semibold", "inline md:hidden")}>
+                  {narrowLabel}
+                </span>
+              </>
+            ) : (
+              <span className={cn(tx, "font-semibold")}>{fullLabel}</span>
+            )}
+          </Button>
+        )}
+      />
+      <TooltipContent side="top">{hintTitle}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -560,15 +622,14 @@ function LyricsColumn({
               className={cn(
                 "min-w-0 flex-1 px-0 py-6 text-center text-lg font-semibold leading-snug tracking-tight text-pretty text-foreground sm:px-1 md:block md:flex-none md:px-1 md:py-6 md:text-xl",
                 // Optical center under max-md: shift left by half of trigger (32px) + gap (8px); ps-2 keeps text off the control
-                isMobileHeader &&
-                  "max-md:-translate-x-[20px] max-md:ps-2",
+                isMobileHeader && "max-md:-translate-x-[20px] max-md:ps-2",
               )}
             >
               {lessonTitle}
             </h2>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+        <div className="flex min-w-0 flex-nowrap items-center justify-center gap-1 sm:gap-2">
           <TransportExtraCluster
             playbackRate={playbackRate}
             onCyclePlaybackRate={onCyclePlaybackRate}
@@ -576,11 +637,13 @@ function LyricsColumn({
             onCycleTrackPlayMode={onCycleTrackPlayMode}
             onCycleTranslationMode={onCycleTranslationMode}
             translationMode={translationMode}
-            className="justify-center"
+            compact
+            className="min-w-0 justify-center"
           />
           <LyricClickModeToggle
             mode={lyricClickMode}
             onCycle={onCycleLyricClickMode}
+            compact
           />
         </div>
       </div>
@@ -657,4 +720,3 @@ function LyricsColumn({
     </div>
   );
 }
-

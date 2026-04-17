@@ -1,3 +1,7 @@
+import { BookCoverArt } from "#/components/book-cover-art.tsx";
+import { Button } from "#/components/ui/button.tsx";
+import { formatMediaTime } from "#/lib/format-media-time.ts";
+import { cn } from "#/lib/utils.ts";
 import type { TrackPlayMode, TranslationMode } from "@nce/player";
 import {
   Eye,
@@ -14,10 +18,6 @@ import {
   SortDesc,
 } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
-import { BookCoverArt } from "#/components/book-cover-art.tsx";
-import { Button } from "#/components/ui/button.tsx";
-import { formatMediaTime } from "#/lib/format-media-time.ts";
-import { cn } from "#/lib/utils.ts";
 
 export type PlayerTransportControlsProps = {
   mediaTime: number;
@@ -68,9 +68,7 @@ function TransportPlayCluster({
   const prevLessonLabel = reverse
     ? "Later lesson in course"
     : "Previous lesson";
-  const nextLessonLabel = reverse
-    ? "Earlier lesson in course"
-    : "Next lesson";
+  const nextLessonLabel = reverse ? "Earlier lesson in course" : "Next lesson";
 
   return (
     <div
@@ -134,6 +132,7 @@ function translationModeUi(mode: TranslationMode): {
   title: string;
   ariaLabel: string;
   shortLabel: string;
+  narrowLabel: string;
   icon: ReactNode;
   buttonClass: string;
 } {
@@ -145,6 +144,7 @@ function translationModeUi(mode: TranslationMode): {
         ariaLabel:
           "Bilingual lyrics: English plus Chinese on every row, but Chinese is sharp only on the currently playing line. Click to cycle display mode",
         shortLabel: "Spotlight",
+        narrowLabel: "Spot",
         icon: <Globe className="size-3.5 shrink-0" aria-hidden />,
         buttonClass: "text-primary",
       };
@@ -155,6 +155,7 @@ function translationModeUi(mode: TranslationMode): {
         ariaLabel:
           "Bilingual lyrics: English stays sharp; Chinese is blurred until hover. Click to cycle display mode",
         shortLabel: "English",
+        narrowLabel: "EN",
         icon: <GlobeOff className="size-3.5 shrink-0" aria-hidden />,
         buttonClass: "text-muted-foreground hover:text-foreground",
       };
@@ -165,6 +166,7 @@ function translationModeUi(mode: TranslationMode): {
         ariaLabel:
           "Both languages blurred until hover. Click to cycle display mode",
         shortLabel: "Blur",
+        narrowLabel: "Blur",
         icon: <EyeClosed className="size-3.5 shrink-0" aria-hidden />,
         buttonClass: "text-muted-foreground hover:text-foreground",
       };
@@ -175,6 +177,7 @@ function translationModeUi(mode: TranslationMode): {
         ariaLabel:
           "Bilingual lyrics with both languages fully sharp on all rows, not only the current line. Click to cycle display mode",
         shortLabel: "Full",
+        narrowLabel: "Full",
         icon: <Eye className="size-3.5 shrink-0" aria-hidden />,
         buttonClass: "text-primary",
       };
@@ -185,6 +188,7 @@ function trackPlayModeButtonUi(mode: TrackPlayMode): {
   title: string;
   ariaLabel: string;
   shortLabel: string;
+  narrowLabel: string;
   icon: ReactNode;
   accent: boolean;
 } {
@@ -194,6 +198,7 @@ function trackPlayModeButtonUi(mode: TrackPlayMode): {
         title: "Sequential: play lessons in book order (next: reverse order)",
         ariaLabel: "Sequential play, click to change mode",
         shortLabel: "Sequential",
+        narrowLabel: "Seq",
         icon: <ListOrdered className="size-3.5 shrink-0" aria-hidden />,
         accent: false,
       };
@@ -203,6 +208,7 @@ function trackPlayModeButtonUi(mode: TrackPlayMode): {
           "Reverse order: after each lesson, play the previous lesson in the book (next: repeat one)",
         ariaLabel: "Reverse course order, click to change mode",
         shortLabel: "Reverse",
+        narrowLabel: "Rev",
         icon: <SortDesc className="size-3.5 shrink-0" aria-hidden />,
         accent: false,
       };
@@ -211,10 +217,32 @@ function trackPlayModeButtonUi(mode: TrackPlayMode): {
         title: "Repeat one (next: sequential)",
         ariaLabel: "Repeat one, click to change mode",
         shortLabel: "Repeat",
+        narrowLabel: "1×",
         icon: <Repeat1 className="size-3.5 shrink-0" aria-hidden />,
         accent: true,
       };
   }
+}
+
+function toolbarLabelPair(
+  compact: boolean | undefined,
+  full: string,
+  narrow: string,
+  textCls: string,
+) {
+  if (!compact) {
+    return <span className={cn(textCls, "font-semibold")}>{full}</span>;
+  }
+  return (
+    <>
+      <span className={cn(textCls, "font-semibold", "hidden md:inline")}>
+        {full}
+      </span>
+      <span className={cn(textCls, "font-semibold", "inline md:hidden")}>
+        {narrow}
+      </span>
+    </>
+  );
 }
 
 export function TransportExtraCluster({
@@ -225,6 +253,7 @@ export function TransportExtraCluster({
   onCycleTranslationMode,
   translationMode,
   className,
+  compact = false,
 }: {
   playbackRate: number;
   onCyclePlaybackRate: () => void;
@@ -233,22 +262,34 @@ export function TransportExtraCluster({
   onCycleTranslationMode: () => void;
   translationMode: TranslationMode;
   className?: string;
+  /** Single-row toolbar: smaller controls; below md use abbreviated labels (no wrap/scroll). */
+  compact?: boolean;
 }) {
   const tr = translationModeUi(translationMode);
   const tm = trackPlayModeButtonUi(trackPlayMode);
+  const btn = compact
+    ? "h-7 shrink-0 gap-0.5 px-1.5 text-muted-foreground hover:text-foreground [&_svg]:size-3"
+    : "h-8 gap-1 px-2 text-muted-foreground hover:text-foreground";
+  const tx = compact ? "text-[0.625rem]" : "text-[0.7rem]";
   return (
-    <div className={cn("flex items-center gap-2 sm:gap-3", className)}>
+    <div
+      className={cn(
+        "flex min-w-0 items-center",
+        compact ? "justify-center gap-1" : "gap-2 sm:gap-3",
+        className,
+      )}
+    >
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 gap-1 px-2 text-muted-foreground hover:text-foreground"
+        className={btn}
         onClick={onCyclePlaybackRate}
         title={`Speed ${playbackRate}x`}
         aria-label={`Playback speed ${playbackRate}x, click to change`}
       >
         <Gauge className="size-3.5 shrink-0" aria-hidden />
-        <span className="text-[0.7rem] font-semibold tabular-nums">
+        <span className={cn(tx, "font-semibold tabular-nums")}>
           {playbackRate}x
         </span>
       </Button>
@@ -257,7 +298,7 @@ export function TransportExtraCluster({
         variant="outline"
         size="sm"
         className={cn(
-          "h-8 gap-1 px-2 text-muted-foreground hover:text-foreground",
+          btn,
           tm.accent && "text-primary border-primary/50",
         )}
         onClick={onCycleTrackPlayMode}
@@ -265,14 +306,16 @@ export function TransportExtraCluster({
         aria-label={tm.ariaLabel}
       >
         {tm.icon}
-        <span className="text-[0.7rem] font-semibold">{tm.shortLabel}</span>
+        {toolbarLabelPair(compact, tm.shortLabel, tm.narrowLabel, tx)}
       </Button>
       <Button
         type="button"
         variant="outline"
         size="sm"
         className={cn(
-          "h-8 gap-1 px-2",
+          compact
+            ? "h-7 shrink-0 gap-0.5 px-1.5 [&_svg]:size-3"
+            : "h-8 gap-1 px-2",
           tr.buttonClass,
           (translationMode === "show" || translationMode === "clear") &&
             "border-primary/50",
@@ -282,7 +325,7 @@ export function TransportExtraCluster({
         aria-label={tr.ariaLabel}
       >
         {tr.icon}
-        <span className="text-[0.7rem] font-semibold">{tr.shortLabel}</span>
+        {toolbarLabelPair(compact, tr.shortLabel, tr.narrowLabel, tx)}
       </Button>
     </div>
   );
